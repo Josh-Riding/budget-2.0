@@ -8,6 +8,7 @@ export interface Bill {
 
 export interface TransactionSplit {
   id: string;
+  label?: string;
   amount: number;
   date: string;
   category?: string;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -23,30 +24,44 @@ export function ManageConnectionsModal({
   activeConnections: initialActiveConnections,
   availableConnections: initialAvailableConnections,
 }: ManageConnectionsModalProps) {
+  const router = useRouter();
   const [activeConnections, setActiveConnections] = useState(initialActiveConnections);
   const [availableConnections, setAvailableConnections] = useState(initialAvailableConnections);
   const [addingConnectionId, setAddingConnectionId] = useState<string | null>(null);
 
-  const handleAddConnection = (connection: AvailableSimpleFinConnection, isOnBudget: boolean) => {
-    // Add to active connections
+  const handleAddConnection = async (connection: AvailableSimpleFinConnection, isOnBudget: boolean) => {
+    // Optimistic update
     const newConnection: SimpleFinConnection = {
       id: connection.id,
       name: connection.name,
-      currentBalance: 0, // Would be fetched from API in production
+      currentBalance: 0,
       isOnBudget,
       accountType: connection.accountType,
     };
-    
+
     setActiveConnections([...activeConnections, newConnection]);
     setAvailableConnections(availableConnections.filter((c) => c.id !== connection.id));
     setAddingConnectionId(null);
+
+    await fetch("/api/connections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: connection.id,
+        name: connection.name,
+        accountType: connection.accountType,
+        isOnBudget,
+      }),
+    });
+
+    router.refresh();
   };
 
-  const handleDisconnect = (connectionId: string) => {
+  const handleDisconnect = async (connectionId: string) => {
     const connection = activeConnections.find((c) => c.id === connectionId);
     if (!connection) return;
 
-    // Move back to available connections
+    // Optimistic update
     const availableConnection: AvailableSimpleFinConnection = {
       id: connection.id,
       name: connection.name,
@@ -55,6 +70,30 @@ export function ManageConnectionsModal({
 
     setAvailableConnections([...availableConnections, availableConnection]);
     setActiveConnections(activeConnections.filter((c) => c.id !== connectionId));
+
+    await fetch(`/api/connections/${connectionId}`, { method: "DELETE" });
+
+    router.refresh();
+  };
+
+  const handleToggleBudget = async (connectionId: string) => {
+    const connection = activeConnections.find((c) => c.id === connectionId);
+    if (!connection) return;
+
+    // Optimistic update
+    setActiveConnections(
+      activeConnections.map((c) =>
+        c.id === connectionId ? { ...c, isOnBudget: !c.isOnBudget } : c
+      )
+    );
+
+    await fetch(`/api/connections/${connectionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isOnBudget: !connection.isOnBudget }),
+    });
+
+    router.refresh();
   };
 
   return (
@@ -94,7 +133,7 @@ export function ManageConnectionsModal({
                         )}
                       </div>
                     </div>
-                    
+
                     {addingConnectionId === connection.id ? (
                       <div className="flex items-center gap-2">
                         <Button
@@ -160,7 +199,11 @@ export function ManageConnectionsModal({
                               {connection.accountType}
                             </Badge>
                           )}
-                          <Badge variant={connection.isOnBudget ? "default" : "secondary"} className="text-xs">
+                          <Badge
+                            variant={connection.isOnBudget ? "default" : "secondary"}
+                            className="text-xs cursor-pointer"
+                            onClick={() => handleToggleBudget(connection.id)}
+                          >
                             {connection.isOnBudget ? "On Budget" : "Off Budget"}
                           </Badge>
                         </div>

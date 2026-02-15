@@ -23,13 +23,14 @@ export function OffBudgetTransactionsTable({ transactions }: OffBudgetTransactio
           <TableRow>
             <TableHead className="w-[140px]">Date</TableHead>
             <TableHead>Name</TableHead>
-            <TableHead className="text-right w-[140px]">Amount</TableHead>
+            <TableHead className="text-right w-[100px]">Deposit</TableHead>
+            <TableHead className="text-right w-[100px]">Withdrawal</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {transactions.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                 No transactions found
               </TableCell>
             </TableRow>
@@ -41,7 +42,10 @@ export function OffBudgetTransactionsTable({ transactions }: OffBudgetTransactio
                 </TableCell>
                 <TableCell>{transaction.name}</TableCell>
                 <TableCell className="text-right font-medium">
-                  ${transaction.amount.toFixed(2)}
+                  {transaction.amount >= 0 ? `$${transaction.amount.toFixed(2)}` : ""}
+                </TableCell>
+                <TableCell className="text-right font-medium">
+                  {transaction.amount < 0 ? `$${Math.abs(transaction.amount).toFixed(2)}` : ""}
                 </TableCell>
               </TableRow>
             ))

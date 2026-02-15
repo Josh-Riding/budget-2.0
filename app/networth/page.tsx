@@ -1,4 +1,6 @@
-import { getSimpleFinConnections, getAvailableSimpleFinConnections } from "@/lib/mock-data";
+import { getSimpleFinConnections, getAvailableSimpleFinConnections } from "@/lib/db/queries";
+
+export const dynamic = "force-dynamic";
 import { ConnectionCard } from "@/components/connection-card";
 import { ManageConnectionsModal } from "@/components/manage-connections-modal";
 import { Separator } from "@/components/ui/separator";

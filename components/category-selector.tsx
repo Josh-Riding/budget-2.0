@@ -34,18 +34,34 @@ interface CategorySelectorProps {
   onSelect: (value: string, incomeMonth?: string) => void;
   bills: Bill[];
   incomeMonth?: string;
+  funds?: { id: string; name: string }[];
+  isDeposit?: boolean;
+  allocationStartDate?: Date | string;
 }
 
-export function CategorySelector({ value, onSelect, bills, incomeMonth }: CategorySelectorProps) {
+export function CategorySelector({
+  value,
+  onSelect,
+  bills,
+  incomeMonth,
+  funds,
+  isDeposit,
+  allocationStartDate,
+}: CategorySelectorProps) {
   const [open, setOpen] = React.useState(false);
   const [showIncomeMonthPicker, setShowIncomeMonthPicker] = React.useState(false);
   const [selectedMonth, setSelectedMonth] = React.useState<Date>(new Date());
 
   const incomeOptions = [{ value: "income", label: "Income" }];
-  
+
   const billOptions = bills.map((bill) => ({
     value: bill.id,
     label: bill.name,
+  }));
+
+  const fundOptions = (funds || []).map((fund) => ({
+    value: `fund:${fund.id}`,
+    label: `${fund.name} Spending`,
   }));
 
   const otherOptions = [
@@ -69,35 +85,49 @@ export function CategorySelector({ value, onSelect, bills, incomeMonth }: Catego
     setShowIncomeMonthPicker(false);
   };
 
-  // Generate next 12 months for picker
-  const nextMonths = Array.from({ length: 12 }, (_, i) => addMonths(startOfMonth(new Date()), i));
+  const parsedAllocationStartDate = React.useMemo(() => {
+    if (!allocationStartDate) return startOfMonth(new Date());
+    const date =
+      allocationStartDate instanceof Date
+        ? allocationStartDate
+        : new Date(allocationStartDate);
+    return Number.isNaN(date.getTime()) ? startOfMonth(new Date()) : startOfMonth(date);
+  }, [allocationStartDate]);
 
-  const allOptions = [...incomeOptions, ...billOptions, ...otherOptions];
+  // Generate next 12 months for picker from the transaction month
+  const nextMonths = Array.from({ length: 12 }, (_, i) =>
+    addMonths(parsedAllocationStartDate, i)
+  );
+
+  const allOptions = [...incomeOptions, ...billOptions, ...fundOptions, ...otherOptions];
   const selectedLabel = allOptions.find((c) => c.value === value)?.label;
 
-  const renderGroup = (heading: string, options: { value: string; label: string }[]) => (
-    <CommandGroup heading={heading} className="py-1">
-      {options.map((category) => (
-        <CommandItem
-          key={category.value}
-          value={category.value}
-          className="py-1.5"
-          onSelect={(currentValue) => {
-             const matched = allOptions.find(c => c.value.toLowerCase() === currentValue.toLowerCase() || c.label.toLowerCase() === currentValue.toLowerCase());
-             handleSelect(matched ? matched.value : currentValue);
-          }}
-        >
-          <Check
-            className={cn(
-              "mr-2 h-4 w-4",
-              value === category.value ? "opacity-100" : "opacity-0"
-            )}
-          />
-          {category.label}
-        </CommandItem>
-      ))}
-    </CommandGroup>
-  );
+  const renderGroup = (heading: string, options: { value: string; label: string }[]) => {
+    if (options.length === 0) return null;
+    return (
+      <CommandGroup heading={heading} className="py-1">
+        {options.map((category) => (
+          <CommandItem
+            key={category.value}
+            value={category.value}
+            className="py-1.5"
+            onSelect={(currentValue) => {
+               const matched = allOptions.find(c => c.value.toLowerCase() === currentValue.toLowerCase() || c.label.toLowerCase() === currentValue.toLowerCase());
+               handleSelect(matched ? matched.value : currentValue);
+            }}
+          >
+            <Check
+              className={cn(
+                "mr-2 h-4 w-4",
+                value === category.value ? "opacity-100" : "opacity-0"
+              )}
+            />
+            {category.label}
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    );
+  };
 
 
   return (
@@ -125,8 +155,9 @@ export function CategorySelector({ value, onSelect, bills, incomeMonth }: Catego
             <CommandInput placeholder="Search category..." className="h-8" />
             <CommandList>
               <CommandEmpty>No category found.</CommandEmpty>
-              {renderGroup("Income", incomeOptions)}
+              {isDeposit !== false && renderGroup("Income", incomeOptions)}
               {renderGroup("Bills", billOptions)}
+              {renderGroup("Fund Spending", fundOptions)}
               {renderGroup("Other", otherOptions)}
             </CommandList>
           </Command>

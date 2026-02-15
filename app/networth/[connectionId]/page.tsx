@@ -1,4 +1,9 @@
-import { getSimpleFinConnections, getConnectionTransactions, getBills } from "@/lib/mock-data";
+import {
+  getConnection,
+  getConnectionTransactions,
+  getBills,
+  getFunds,
+} from "@/lib/db/queries";
 import { TransactionsTable } from "@/components/transactions-table";
 import { OffBudgetTransactionsTable } from "@/components/off-budget-transactions-table";
 import { Button } from "@/components/ui/button";
@@ -13,15 +18,18 @@ export default async function ConnectionDetailPage({
   params: Promise<{ connectionId: string }>;
 }) {
   const { connectionId } = await params;
-  const connections = await getSimpleFinConnections();
-  const connection = connections.find((c) => c.id === connectionId);
+  const [connection, transactionRows, bills, funds] = await Promise.all([
+    getConnection(connectionId),
+    getConnectionTransactions(connectionId),
+    getBills(),
+    getFunds(),
+  ]);
 
   if (!connection) {
     notFound();
   }
 
-  const transactions = await getConnectionTransactions(connectionId);
-  const bills = await getBills();
+  const transactions = transactionRows;
 
   const isNegative = connection.currentBalance < 0;
 
@@ -62,7 +70,11 @@ export default async function ConnectionDetailPage({
               </div>
             </div>
             {connection.isOnBudget ? (
-              <TransactionsTable transactions={transactions} bills={bills} />
+              <TransactionsTable
+                transactions={transactions}
+                bills={bills}
+                funds={funds}
+              />
             ) : (
               <OffBudgetTransactionsTable transactions={transactions} />
             )}
