@@ -26,11 +26,6 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Copy drizzle migrations and config for runtime migration
-COPY --from=builder /app/lib/db ./lib/db
-COPY --from=deps /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
-COPY --from=deps /app/node_modules/drizzle-kit ./node_modules/drizzle-kit
-
 USER nextjs
 
 EXPOSE 3000
@@ -39,3 +34,8 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
+
+# Migration runner (has full project + dev deps)
+FROM builder AS migrate
+WORKDIR /app
+CMD ["npx", "drizzle-kit", "push"]
