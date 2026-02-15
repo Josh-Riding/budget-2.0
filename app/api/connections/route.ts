@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { connections } from "@/lib/db/schema";
+import { getSimpleFinConnections } from "@/lib/db/queries";
+
+export async function GET() {
+  const allConnections = await getSimpleFinConnections();
+  return NextResponse.json(allConnections);
+}
 
 export async function POST(request: Request) {
   const body = await request.json();

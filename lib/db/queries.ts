@@ -9,10 +9,10 @@ import {
   fundAllocations,
   sealedMonths,
   fundSettings,
+  appSettings,
 } from "./schema";
 import type {
   SimpleFinConnection,
-  AvailableSimpleFinConnection,
   Transaction,
   Bill,
 } from "@/lib/types";
@@ -131,11 +131,24 @@ export async function getBills(): Promise<Bill[]> {
   }));
 }
 
-export async function getAvailableSimpleFinConnections(): Promise<
-  AvailableSimpleFinConnection[]
-> {
-  // Placeholder — will be replaced with SimpleFin API integration
-  return [];
+export async function getAppSetting(key: string): Promise<string | null> {
+  const rows = await db
+    .select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, key))
+    .limit(1);
+  return rows[0]?.value ?? null;
+}
+
+export async function setAppSetting(key: string, value: string): Promise<void> {
+  await db
+    .insert(appSettings)
+    .values({ id: `setting-${key}`, key, value })
+    .onConflictDoUpdate({ target: appSettings.key, set: { value } });
+}
+
+export async function deleteAppSetting(key: string): Promise<void> {
+  await db.delete(appSettings).where(eq(appSettings.key, key));
 }
 
 export async function getAllOnBudgetTransactions(): Promise<Transaction[]> {

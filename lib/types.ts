@@ -41,9 +41,3 @@ export interface SimpleFinConnection {
   isOnBudget: boolean; // Determines if transactions are categorized
   accountType?: string; // e.g., "checking", "savings", "credit"
 }
-
-export interface AvailableSimpleFinConnection {
-  id: string;
-  name: string;
-  accountType?: string;
-}

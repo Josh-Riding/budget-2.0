@@ -36,6 +36,7 @@ export const connections = pgTable("connections", {
     .default("0"),
   isOnBudget: boolean("is_on_budget").notNull().default(true),
   accountType: accountTypeEnum("account_type"),
+  lastSyncedAt: timestamp("last_synced_at"),
 });
 
 export const transactions = pgTable("transactions", {
@@ -108,6 +109,12 @@ export const fundSettings = pgTable("fund_settings", {
   isVisible: boolean("is_visible").notNull().default(true),
   overrideAmount: numeric("override_amount", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const appSettings = pgTable("app_settings", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
 });
 
 // Relations

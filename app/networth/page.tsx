@@ -1,4 +1,4 @@
-import { getSimpleFinConnections, getAvailableSimpleFinConnections } from "@/lib/db/queries";
+import { getSimpleFinConnections, getAppSetting } from "@/lib/db/queries";
 
 export const dynamic = "force-dynamic";
 import { ConnectionCard } from "@/components/connection-card";
@@ -9,12 +9,14 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default async function NetWorthPage() {
-  const connections = await getSimpleFinConnections();
-  const availableConnections = await getAvailableSimpleFinConnections();
-  
+  const [connections, simpleFinUrl] = await Promise.all([
+    getSimpleFinConnections(),
+    getAppSetting("simplefin_access_url"),
+  ]);
+
   const onBudgetConnections = connections.filter((c) => c.isOnBudget);
   const offBudgetConnections = connections.filter((c) => !c.isOnBudget);
-  
+
   const totalNetWorth = connections.reduce((sum, c) => sum + c.currentBalance, 0);
 
   return (
@@ -36,9 +38,9 @@ export default async function NetWorthPage() {
               </p>
             </div>
           </div>
-          <ManageConnectionsModal 
+          <ManageConnectionsModal
             activeConnections={connections}
-            availableConnections={availableConnections}
+            isSimpleFinConnected={!!simpleFinUrl}
           />
         </div>
 
