@@ -27,7 +27,6 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
 # Copy drizzle migrations and config for runtime migration
-COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/lib/db ./lib/db
 COPY --from=deps /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
 COPY --from=deps /app/node_modules/drizzle-kit ./node_modules/drizzle-kit
