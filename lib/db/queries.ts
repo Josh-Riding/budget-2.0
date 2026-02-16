@@ -716,5 +716,5 @@ export async function getExpensesForMonth(month: string): Promise<number> {
       )
     );
 
-  return Number(nonSplit[0]?.total ?? 0) + Number(splitRows[0]?.total ?? 0);
+  return Math.abs(Number(nonSplit[0]?.total ?? 0) + Number(splitRows[0]?.total ?? 0));
 }
