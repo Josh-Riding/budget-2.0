@@ -79,9 +79,8 @@ export function AddTransactionModal({ bills, funds = [] }: AddTransactionModalPr
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Transaction
+        <Button variant="outline" size="icon" className="rounded-full">
+          <Plus className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

@@ -45,7 +45,7 @@ export default async function ConnectionDetailPage({
             </Button>
           </Link>
           <div className="text-right">
-            <h1 className="text-3xl font-bold text-slate-900">{connection.name}</h1>
+            <h1 className="text-3xl font-bold text-slate-900">{connection.displayName || connection.name}</h1>
             <p className={`text-lg mt-1 font-semibold ${isNegative ? 'text-red-600' : 'text-slate-600'}`}>
               ${Math.abs(connection.currentBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               {isNegative && <span className="ml-1 text-sm">CR</span>}
@@ -74,6 +74,7 @@ export default async function ConnectionDetailPage({
                 transactions={transactions}
                 bills={bills}
                 funds={funds}
+                connectionNames={{ [connection.id]: connection.displayName || connection.name }}
               />
             ) : (
               <OffBudgetTransactionsTable transactions={transactions} />

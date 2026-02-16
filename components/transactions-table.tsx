@@ -36,6 +36,7 @@ interface TransactionsTableProps {
   transactions: Transaction[];
   bills: Bill[];
   funds?: { id: string; name: string }[];
+  connectionNames?: Record<string, string>;
   initialMonth?: string;
 }
 
@@ -70,6 +71,7 @@ export function TransactionsTable({
   transactions: initialTransactions,
   bills,
   funds = [],
+  connectionNames = {},
   initialMonth = "All Months",
 }: TransactionsTableProps) {
   const router = useRouter();
@@ -77,7 +79,9 @@ export function TransactionsTable({
   const [filterMonth, setFilterMonth] = useState<string>(initialMonth);
   const [filterCategory, setFilterCategory] = useState<string>("All Categories");
   const [filterType, setFilterType] = useState<string>("All");
-  const [collapsedSplitRows, setCollapsedSplitRows] = useState<Set<string>>(new Set());
+  const [collapsedSplitRows, setCollapsedSplitRows] = useState<Set<string>>(
+    () => new Set(initialTransactions.filter((t) => t.isSplit).map((t) => t.id))
+  );
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Extract distinct months and categories from transactions
@@ -265,9 +269,10 @@ export function TransactionsTable({
     setTransactions((prev) => {
       const updated = prev.map((t) => {
         if (t.id === transactionId && t.splits) {
-          const otherSplitsTotal = t.splits.reduce((sum, s) => (s.id !== splitId ? sum + s.amount : sum), 0);
-          const maxAmount = t.amount - otherSplitsTotal;
-          const validAmount = Math.min(Math.max(0, amount), maxAmount);
+          const absTotal = Math.abs(t.amount);
+          const otherSplitsTotal = t.splits.reduce((sum, s) => (s.id !== splitId ? sum + Math.abs(s.amount) : sum), 0);
+          const maxAmount = absTotal - otherSplitsTotal;
+          const validAmount = Math.min(Math.max(0, amount), Math.max(0, maxAmount));
 
           const newSplits = t.splits.map((s) => (s.id === splitId ? { ...s, amount: validAmount } : s));
           persistSplits(transactionId, newSplits);
@@ -358,8 +363,9 @@ export function TransactionsTable({
     setTransactions((prev) => {
       const updated = prev.map((t) => {
         if (t.id === transactionId && t.splits) {
-          const totalAllocated = t.splits.reduce((sum, s) => (s.id !== splitId ? sum + s.amount : sum), 0);
-          const remaining = t.amount - totalAllocated;
+          const absTotal = Math.abs(t.amount);
+          const totalAllocated = t.splits.reduce((sum, s) => (s.id !== splitId ? sum + Math.abs(s.amount) : sum), 0);
+          const remaining = absTotal - totalAllocated;
           const newSplits = t.splits.map((s) => (s.id === splitId ? { ...s, amount: Math.max(0, remaining) } : s));
           persistSplits(transactionId, newSplits);
           return { ...t, splits: newSplits };
@@ -380,17 +386,17 @@ export function TransactionsTable({
   };
 
   const getRemainingBalance = (transaction: Transaction): number => {
-    if (!transaction.splits) return transaction.amount;
-    const totalAllocated = transaction.splits.reduce((sum, s) => sum + s.amount, 0);
-    return transaction.amount - totalAllocated;
+    if (!transaction.splits) return Math.abs(transaction.amount);
+    const absTotal = Math.abs(transaction.amount);
+    const totalAllocated = transaction.splits.reduce((sum, s) => sum + Math.abs(s.amount), 0);
+    return absTotal - totalAllocated;
   };
 
   return (
     <div className="space-y-4">
       {/* Filter Bar */}
-      <div className="flex gap-4 items-end">
-        <AddTransactionModal bills={bills} funds={funds} />
-        <div className="flex-1">
+      <div className="flex flex-wrap gap-2 sm:gap-4 items-end">
+        <div className="flex-1 min-w-[100px]">
           <label className="text-sm font-medium mb-2 block">Month</label>
           <Select value={filterMonth} onValueChange={setFilterMonth}>
             <SelectTrigger className="w-full">
@@ -406,7 +412,7 @@ export function TransactionsTable({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[100px]">
           <label className="text-sm font-medium mb-2 block">Category</label>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-full">
@@ -422,7 +428,7 @@ export function TransactionsTable({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[100px]">
           <label className="text-sm font-medium mb-2 block">Type</label>
           <Select value={filterType} onValueChange={setFilterType}>
             <SelectTrigger className="w-full">
@@ -435,10 +441,182 @@ export function TransactionsTable({
             </SelectContent>
           </Select>
         </div>
+        <AddTransactionModal bills={bills} funds={funds} />
       </div>
 
-      {/* Table */}
-      <div className="rounded-md border">
+      {/* Mobile Card Layout */}
+      <div className="sm:hidden space-y-2">
+        {filteredTransactions.map((transaction) => {
+          const isSplitCollapsed = collapsedSplitRows.has(transaction.id);
+          const splitCount = transaction.splits?.length ?? 0;
+          const isDeposit = transaction.amount >= 0;
+
+          return (
+            <div key={transaction.id} className={cn("border rounded-lg p-3 space-y-2", transaction.isSplit && isSplitCollapsed && "bg-muted/20")}>
+              {/* Row 1: Date + Amount */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(transaction.date), "MMM d, yyyy")}
+                </span>
+                <span className={cn("text-sm font-semibold", isDeposit ? "text-emerald-600" : "text-slate-900")}>
+                  {isDeposit ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                </span>
+              </div>
+
+              {/* Row 2: Name + bank */}
+              <div>
+                <div className="text-sm font-medium truncate" title={transaction.name}>{transaction.name}</div>
+                {transaction.connectionId && connectionNames[transaction.connectionId] && (
+                  <div className="text-xs text-muted-foreground">{connectionNames[transaction.connectionId]}</div>
+                )}
+              </div>
+
+              {/* Row 3: Category + actions */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  {!transaction.isSplit ? (
+                    <CategorySelector
+                      value={transaction.category}
+                      incomeMonth={transaction.incomeMonth}
+                      bills={bills}
+                      funds={funds}
+                      isDeposit={isDeposit}
+                      allocationStartDate={transaction.date}
+                      onSelect={(category, incomeMonth) =>
+                        handleCategoryChange(transaction.id, category, incomeMonth)
+                      }
+                    />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {splitCount} split{splitCount !== 1 ? "s" : ""}
+                      {transaction.isSplit && (
+                        <span className="ml-1">
+                          (${getRemainingBalance(transaction).toFixed(2)} remaining)
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {!transaction.isSplit ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSplitTransaction(transaction.id)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Split className="h-3.5 w-3.5" />
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleSplitRows(transaction.id)}
+                        className="h-7 w-7 p-0"
+                      >
+                        {isSplitCollapsed ? (
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleUnsplitTransaction(transaction.id)}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Split details (expanded) */}
+              {transaction.isSplit && transaction.splits && !isSplitCollapsed && (
+                <div className="border-t pt-2 space-y-3">
+                  {transaction.splits.map((split, index) => (
+                    <div key={split.id} className="bg-muted/30 rounded-md p-2 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          value={split.label ?? ""}
+                          placeholder={`Split ${index + 1}`}
+                          onChange={(e) =>
+                            handleSplitLabelChange(transaction.id, split.id, e.target.value)
+                          }
+                          className="h-7 text-xs flex-1"
+                        />
+                        {transaction.splits && transaction.splits.length > 2 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSplitRow(transaction.id, split.id)}
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="date"
+                          value={split.date}
+                          onChange={(e) => handleSplitDateChange(transaction.id, split.id, e.target.value)}
+                          className="h-7 text-xs flex-1"
+                        />
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs">$</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={split.amount || ""}
+                            onChange={(e) =>
+                              handleSplitAmountChange(transaction.id, split.id, parseFloat(e.target.value) || 0)
+                            }
+                            className="h-7 w-20 text-xs text-right"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => fillRemainingBalance(transaction.id, split.id)}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ArrowDown01 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <CategorySelector
+                        value={split.category}
+                        incomeMonth={split.incomeMonth}
+                        bills={bills}
+                        funds={funds}
+                        allocationStartDate={split.date}
+                        onSelect={(category, incomeMonth) =>
+                          handleSplitCategoryChange(transaction.id, split.id, category, incomeMonth)
+                        }
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addSplitRow(transaction.id)}
+                    className="h-7 text-xs w-full"
+                  >
+                    + Add Split
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden sm:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -465,7 +643,10 @@ export function TransactionsTable({
                     {format(new Date(transaction.date), "MMM d, yyyy")}
                   </TableCell>
                   <TableCell>
-                    <div>{transaction.name}</div>
+                    <div className="max-w-[300px] truncate" title={transaction.name}>{transaction.name}</div>
+                    {transaction.connectionId && connectionNames[transaction.connectionId] && (
+                      <div className="text-xs text-muted-foreground">{connectionNames[transaction.connectionId]}</div>
+                    )}
                     {transaction.isSplit && (
                       <div className="text-xs text-muted-foreground mt-1">
                         {splitCount} split {splitCount === 1 ? "part" : "parts"}

@@ -11,6 +11,7 @@ import { FundsSettingsModal } from "@/components/funds-settings-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { BudgetSummaryModal } from "@/components/budget-summary-modal";
 import { Lock, Settings } from "lucide-react";
 
 interface Fund {
@@ -36,6 +37,10 @@ interface DashboardContentProps {
   uncategorizedCount: number;
   isSealed: boolean;
   remainingCash: number;
+  totalRemainingCash: number;
+  transactionCount: number;
+  incomeDetails: { amount: number; date: string }[];
+  everythingElseSpending: number;
   bills: { id: string; name: string; expectedAmount: number; paidAmount?: number; date?: string }[];
 }
 
@@ -50,6 +55,10 @@ export function DashboardContent({
   uncategorizedCount,
   isSealed,
   remainingCash,
+  totalRemainingCash,
+  transactionCount,
+  incomeDetails,
+  everythingElseSpending,
   bills,
 }: DashboardContentProps) {
   const router = useRouter();
@@ -84,7 +93,7 @@ export function DashboardContent({
         {/* Top Row Grid */}
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-7 items-start">
           {/* Left Card */}
-          <Card className="col-span-1 md:col-span-1 lg:col-span-2 shadow-sm">
+          <Card className="col-span-1 md:col-span-1 lg:col-span-2 shadow-sm order-2 lg:order-1">
             <CardContent className="space-y-4">
               {leftFunds.length > 0 ? (
                 leftFunds.map((fund, i) => (
@@ -109,10 +118,20 @@ export function DashboardContent({
           </Card>
 
           {/* Center Card: Main Financials */}
-          <Card className="col-span-1 md:col-span-1 lg:col-span-3 border-slate-200 shadow-md">
+          <Card className="col-span-1 md:col-span-1 lg:col-span-3 border-slate-200 shadow-md order-1 lg:order-2">
             <CardContent className="flex flex-col items-center justify-center py-6 space-y-6 relative">
-              {/* Settings Icon */}
-              <div className="absolute top-4 right-4">
+              {/* Top-right icons */}
+              <div className="absolute top-4 right-4 flex items-center gap-1">
+                <BudgetSummaryModal
+                  month={month}
+                  income={income}
+                  incomeDetails={incomeDetails}
+                  billsTotal={billsTotal}
+                  billsPaid={billsPaid}
+                  bills={bills}
+                  everythingElseSpending={everythingElseSpending}
+                  totalRemainingCash={totalRemainingCash}
+                />
                 <Button
                   variant="ghost"
                   size="icon"
@@ -124,14 +143,17 @@ export function DashboardContent({
               </div>
 
               <div className="flex flex-col items-center space-y-8 w-full">
-                <div className="flex flex-col items-center">
+                <Link
+                  href={`/transactions?month=${month}&filter=income`}
+                  className="flex flex-col items-center hover:opacity-80 transition-opacity cursor-pointer"
+                >
                   <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">
                     Income
                   </span>
                   <div className="text-5xl font-extrabold text-emerald-600 tracking-tight">
                     ${income.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </div>
-                </div>
+                </Link>
 
                 <div className="flex flex-col items-center">
                   <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">
@@ -139,6 +161,15 @@ export function DashboardContent({
                   </span>
                   <div className="text-4xl font-bold text-slate-800 tracking-tight">
                     ${remainingCash.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                    Total Remaining
+                  </span>
+                  <div className="text-2xl font-bold text-slate-600 tracking-tight">
+                    ${totalRemainingCash.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
@@ -170,7 +201,7 @@ export function DashboardContent({
           </Card>
 
           {/* Right Card */}
-          <Card className="col-span-1 md:col-span-1 lg:col-span-2 shadow-sm">
+          <Card className="col-span-1 md:col-span-1 lg:col-span-2 shadow-sm order-3">
             <CardContent className="space-y-4">
               {rightFunds.length > 0 ? (
                 rightFunds.map((fund, i) => (
@@ -219,7 +250,7 @@ export function DashboardContent({
                 yet
               </Button>
             </Link>
-          ) : isMonthPast ? (
+          ) : isMonthPast && transactionCount > 0 ? (
             <SealMonthModal month={month} totalSaved={totalSaved} funds={funds} />
           ) : (
             <Link href={`/transactions?month=${month}`}>

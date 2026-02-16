@@ -37,6 +37,7 @@ export type CategoryOption =
 export interface SimpleFinConnection {
   id: string;
   name: string; // e.g., "Chase Checking", "Savings Account"
+  displayName?: string; // User-friendly custom name
   currentBalance: number;
   isOnBudget: boolean; // Determines if transactions are categorized
   accountType?: string; // e.g., "checking", "savings", "credit"

@@ -14,6 +14,9 @@ export async function PATCH(
   if (typeof body.isOnBudget === "boolean") {
     updates.isOnBudget = body.isOnBudget;
   }
+  if (typeof body.displayName === "string") {
+    updates.displayName = body.displayName || null;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });

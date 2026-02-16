@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { SimpleFinConnection } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Unplug } from "lucide-react";
+import { Pencil, RefreshCw, Unplug } from "lucide-react";
 
 interface ManageConnectionsModalProps {
   activeConnections: SimpleFinConnection[];
@@ -95,6 +95,38 @@ export function ManageConnectionsModal({
     router.refresh();
   };
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const handleStartEdit = (connection: SimpleFinConnection) => {
+    setEditingId(connection.id);
+    setEditValue(connection.displayName || connection.name);
+  };
+
+  const handleSaveName = async (connectionId: string) => {
+    const trimmed = editValue.trim();
+    const connection = activeConnections.find((c) => c.id === connectionId);
+    if (!connection) return;
+
+    // If the user cleared it or set it back to the original name, store null
+    const displayName = trimmed === "" || trimmed === connection.name ? "" : trimmed;
+
+    setActiveConnections(
+      activeConnections.map((c) =>
+        c.id === connectionId ? { ...c, displayName: displayName || undefined } : c
+      )
+    );
+    setEditingId(null);
+
+    await fetch(`/api/connections/${connectionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName }),
+    });
+
+    router.refresh();
+  };
+
   const handleToggleBudget = async (connectionId: string) => {
     const connection = activeConnections.find((c) => c.id === connectionId);
     if (!connection) return;
@@ -121,7 +153,7 @@ export function ManageConnectionsModal({
           Manage Connections
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Manage SimpleFin Connections</DialogTitle>
         </DialogHeader>
@@ -132,7 +164,7 @@ export function ManageConnectionsModal({
             <h3 className="text-sm font-semibold text-slate-700 mb-3">SimpleFin Bridge</h3>
             {isConnected ? (
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50/50">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border rounded-lg bg-green-50/50">
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-green-500" />
                     <span className="text-sm font-medium">Connected</span>
@@ -143,6 +175,7 @@ export function ManageConnectionsModal({
                       variant="outline"
                       onClick={handleSync}
                       disabled={syncing}
+                      className="flex-1 sm:flex-initial"
                     >
                       <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
                       {syncing ? "Syncing..." : "Sync Now"}
@@ -151,7 +184,7 @@ export function ManageConnectionsModal({
                       size="sm"
                       variant="ghost"
                       onClick={handleDisconnectSimpleFin}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1 sm:flex-initial"
                     >
                       <Unplug className="h-4 w-4 mr-1" />
                       Disconnect
@@ -200,36 +233,59 @@ export function ManageConnectionsModal({
                 {activeConnections.map((connection) => (
                   <div
                     key={connection.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="border rounded-lg p-3 space-y-2"
                   >
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-medium text-sm">{connection.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {connection.accountType && (
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {connection.accountType}
-                            </Badge>
-                          )}
-                          <Badge
-                            variant={connection.isOnBudget ? "default" : "secondary"}
-                            className="text-xs cursor-pointer"
-                            onClick={() => handleToggleBudget(connection.id)}
+                    {/* Row 1: Name + Balance */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        {editingId === connection.id ? (
+                          <Input
+                            autoFocus
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => handleSaveName(connection.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveName(connection.id);
+                              if (e.key === "Escape") setEditingId(null);
+                            }}
+                            className="h-7 text-sm font-medium w-full sm:w-48"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => handleStartEdit(connection)}
+                            className="flex items-center gap-1.5 group text-left min-w-0"
                           >
-                            {connection.isOnBudget ? "On Budget" : "Off Budget"}
-                          </Badge>
-                        </div>
+                            <p className="font-medium text-sm truncate">{connection.displayName || connection.name}</p>
+                            <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                          </button>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-slate-700">
+                      <span className="text-sm font-semibold text-slate-700 shrink-0">
                         ${connection.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </span>
+                    </div>
+
+                    {/* Row 2: Badges + Disconnect */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {connection.accountType && (
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {connection.accountType}
+                          </Badge>
+                        )}
+                        <Badge
+                          variant={connection.isOnBudget ? "default" : "secondary"}
+                          className="text-xs cursor-pointer"
+                          onClick={() => handleToggleBudget(connection.id)}
+                        >
+                          {connection.isOnBudget ? "On Budget" : "Off Budget"}
+                        </Badge>
+                      </div>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => handleDisconnectAccount(connection.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 text-xs shrink-0"
                       >
                         Disconnect
                       </Button>

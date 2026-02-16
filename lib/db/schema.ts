@@ -31,6 +31,7 @@ export const categoryTypeEnum = pgEnum("category_type", [
 export const connections = pgTable("connections", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  displayName: text("display_name"),
   currentBalance: numeric("current_balance", { precision: 12, scale: 2 })
     .notNull()
     .default("0"),

@@ -20,20 +20,20 @@ export default async function NetWorthPage() {
   const totalNetWorth = connections.reduce((sum, c) => sum + c.currentBalance, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6 md:p-10">
+    <div className="min-h-screen bg-gray-50/50 p-4 sm:p-6 md:p-10">
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/">
               <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                <ArrowLeft className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Back</span>
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Net Worth</h1>
-              <p className="text-lg text-slate-600 mt-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Net Worth</h1>
+              <p className="text-base sm:text-lg text-slate-600 mt-0.5 sm:mt-1">
                 ${totalNetWorth.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
@@ -46,13 +46,13 @@ export default async function NetWorthPage() {
 
         {/* On Budget Section */}
         <div>
-          <h2 className="text-xl font-semibold text-slate-800 mb-4">On Budget</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4">On Budget</h2>
           {onBudgetConnections.length === 0 ? (
             <p className="text-muted-foreground text-center py-8 border rounded-lg bg-white">
               No on-budget connections
             </p>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {onBudgetConnections.map((connection) => (
                 <Link key={connection.id} href={`/networth/${connection.id}`}>
                   <ConnectionCard connection={connection} />
@@ -62,17 +62,17 @@ export default async function NetWorthPage() {
           )}
         </div>
 
-        <Separator className="my-8" />
+        <Separator className="my-6 sm:my-8" />
 
         {/* Off Budget Section */}
         <div>
-          <h2 className="text-xl font-semibold text-slate-800 mb-4">Off Budget</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4">Off Budget</h2>
           {offBudgetConnections.length === 0 ? (
             <p className="text-muted-foreground text-center py-8 border rounded-lg bg-white">
               No off-budget connections
             </p>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {offBudgetConnections.map((connection) => (
                 <Link key={connection.id} href={`/networth/${connection.id}`}>
                   <ConnectionCard connection={connection} />

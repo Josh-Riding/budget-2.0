@@ -132,7 +132,7 @@ export function BillsModal({ currentMonth, bills: initialBills }: BillsModalProp
           <span className="text-2xl font-bold text-slate-700 select-none">${currentBillsExpectedTotal.toFixed(2)}</span>
         </div>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Expected Bills for {monthName}</DialogTitle>
           <DialogDescription>
@@ -141,7 +141,95 @@ export function BillsModal({ currentMonth, bills: initialBills }: BillsModalProp
         </DialogHeader>
 
         <div className="py-4">
-          <div className="rounded-md border max-h-[400px] overflow-y-auto">
+          {/* Mobile: card layout */}
+          <div className="sm:hidden space-y-3 max-h-[50vh] overflow-y-auto">
+            {bills.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No bills added for this month.
+              </p>
+            ) : (
+              bills.map((bill) => (
+                <div key={bill.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{bill.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-red-500"
+                      onClick={() => handleDeleteBill(bill.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  {editingId === bill.id ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={editAmount}
+                        onChange={(e) => setEditAmount(e.target.value)}
+                        className="h-8 flex-1 text-sm text-right"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() =>
+                          handleUpdateExpectedAmount(
+                            bill.id,
+                            parseFloat(editAmount) || bill.expectedAmount
+                          )
+                        }
+                      >
+                        <Check className="h-4 w-4 text-green-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => setEditingId(null)}
+                      >
+                        <X className="h-4 w-4 text-gray-400" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Expected</span>
+                        <button
+                          className="flex items-center gap-1 mt-0.5"
+                          onClick={() => {
+                            setEditingId(bill.id);
+                            setEditAmount(bill.expectedAmount.toString());
+                          }}
+                        >
+                          <span>${bill.expectedAmount.toFixed(2)}</span>
+                          <Edit2 className="h-3 w-3 text-gray-400" />
+                        </button>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Paid</span>
+                        <span className="mt-0.5 block">
+                          {bill.paidAmount ? `$${bill.paidAmount.toFixed(2)}` : "-"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Date</span>
+                        <span className="mt-0.5 block text-muted-foreground">
+                          {bill.date ? new Date(bill.date).toLocaleDateString() : "-"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden sm:block rounded-md border max-h-[400px] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -239,8 +327,8 @@ export function BillsModal({ currentMonth, bills: initialBills }: BillsModalProp
         </div>
 
         <div className="grid gap-4 py-4 border-t">
-          <div className="grid grid-cols-4 items-end gap-4">
-            <div className="grid gap-2 col-span-2">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
+            <div className="grid gap-2 flex-1">
               <Label htmlFor="name">New Bill Name</Label>
               <Input
                 id="name"
@@ -249,27 +337,29 @@ export function BillsModal({ currentMonth, bills: initialBills }: BillsModalProp
                 onChange={(e) => setNewBillName(e.target.value)}
               />
             </div>
-            <div className="grid gap-2 col-span-1">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="0.00"
-                value={newBillAmount}
-                onChange={(e) => setNewBillAmount(e.target.value)}
-              />
+            <div className="flex items-end gap-2">
+              <div className="grid gap-2 flex-1 sm:flex-initial">
+                <Label htmlFor="amount">Amount</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="0.00"
+                  className="sm:w-24"
+                  value={newBillAmount}
+                  onChange={(e) => setNewBillAmount(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleAddBill} className="rounded-full" size="icon">
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
-            <Button onClick={handleAddBill} className="col-span-1 rounded-full" size="icon">
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
         <DialogFooter className="sm:justify-between">
-          <Button variant="outline" onClick={handleUseLastMonth}>
+          <Button variant="outline" onClick={handleUseLastMonth} className="w-full sm:w-auto">
             <Copy className="mr-2 h-4 w-4" /> Use Last Month&apos;s Bills
           </Button>
-          {/* Close is handled automatically by Dialog primitive, but we can add a close button if desired */}
         </DialogFooter>
       </DialogContent>
     </Dialog>

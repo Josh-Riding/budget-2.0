@@ -64,6 +64,7 @@ export async function getSimpleFinConnections(): Promise<
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
+    displayName: r.displayName ?? undefined,
     currentBalance: Number(r.currentBalance),
     isOnBudget: r.isOnBudget,
     accountType: r.accountType ?? undefined,
@@ -83,6 +84,7 @@ export async function getConnection(
   return {
     id: r.id,
     name: r.name,
+    displayName: r.displayName ?? undefined,
     currentBalance: Number(r.currentBalance),
     isOnBudget: r.isOnBudget,
     accountType: r.accountType ?? undefined,
@@ -230,6 +232,28 @@ export async function getOnBudgetTransactionsForMonth(
   }));
 }
 
+export async function getTransactionCountForMonth(month: string): Promise<number> {
+  const { start, end } = getMonthDateRange(month);
+  const onBudget = await db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(eq(connections.isOnBudget, true));
+  const ids = onBudget.map((c) => c.id);
+  if (ids.length === 0) return 0;
+
+  const result = await db
+    .select({ count: count() })
+    .from(transactions)
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        gte(transactions.date, start),
+        lt(transactions.date, end)
+      )
+    );
+  return Number(result[0]?.count ?? 0);
+}
+
 export async function getUncategorizedCount(month: string): Promise<number> {
   const { start, end } = getMonthDateRange(month);
   const onBudget = await db
@@ -356,13 +380,19 @@ export async function getFundBalances(): Promise<
 }
 
 export async function getBillsForMonth(month: string): Promise<Bill[]> {
-  const { start, end } = getMonthDateRange(month);
   const billRows = await db
     .select()
     .from(bills)
     .where(eq(bills.month, month));
 
-  // Get paid amounts and dates from transactions for each bill
+  const billIds = billRows.map((r) => r.id);
+  if (billIds.length === 0) {
+    return [];
+  }
+
+  // Get paid amounts and dates from transactions categorized to these bills
+  // Use bill IDs instead of date range — a bill ID is month-specific,
+  // so any transaction pointing to it belongs to this month's bill
   const onBudget = await db
     .select({ id: connections.id })
     .from(connections)
@@ -389,8 +419,7 @@ export async function getBillsForMonth(month: string): Promise<Bill[]> {
       and(
         inArray(transactions.connectionId, onBudgetIds),
         eq(transactions.categoryType, "bill"),
-        gte(transactions.date, start),
-        lt(transactions.date, end)
+        inArray(transactions.categoryId, billIds)
       )
     )
     .groupBy(transactions.categoryId);
@@ -410,8 +439,7 @@ export async function getBillsForMonth(month: string): Promise<Bill[]> {
       and(
         inArray(transactions.connectionId, onBudgetIds),
         eq(transactionSplits.categoryType, "bill"),
-        gte(transactionSplits.date, start),
-        lt(transactionSplits.date, end)
+        inArray(transactionSplits.categoryId, billIds)
       )
     )
     .groupBy(transactionSplits.categoryId);
@@ -445,6 +473,132 @@ export async function getBillsForMonth(month: string): Promise<Bill[]> {
     paidAmount: paidMap.get(r.id)?.amount,
     date: paidMap.get(r.id)?.date,
   }));
+}
+
+export async function getIncomeTransactionsForMonth(
+  month: string
+): Promise<Transaction[]> {
+  const onBudget = await db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(eq(connections.isOnBudget, true));
+  const ids = onBudget.map((c) => c.id);
+  if (ids.length === 0) return [];
+
+  // Get transactions where the transaction itself is income for this month
+  const incomeRows = await db.query.transactions.findMany({
+    where: and(
+      inArray(transactions.connectionId, ids),
+      eq(transactions.categoryType, "income"),
+      eq(transactions.incomeMonth, month)
+    ),
+    with: { splits: true },
+    orderBy: [desc(transactions.date)],
+  });
+
+  // Also get transactions that have splits categorized as income for this month
+  const splitRows = await db.query.transactions.findMany({
+    where: and(
+      inArray(transactions.connectionId, ids),
+      eq(transactions.isSplit, true)
+    ),
+    with: { splits: true },
+    orderBy: [desc(transactions.date)],
+  });
+
+  const splitMatches = splitRows.filter(
+    (r) =>
+      !incomeRows.some((ir) => ir.id === r.id) &&
+      r.splits.some(
+        (s) => s.categoryType === "income" && s.incomeMonth === month
+      )
+  );
+
+  const allRows = [...incomeRows, ...splitMatches];
+
+  return allRows.map((r) => ({
+    id: r.id,
+    date: r.date,
+    name: r.name,
+    amount: Number(r.amount),
+    category: mapCategory(r.categoryType, r.categoryId),
+    incomeMonth: r.incomeMonth ?? undefined,
+    isSplit: r.isSplit || undefined,
+    connectionId: r.connectionId ?? undefined,
+    splits: r.splits.length
+      ? r.splits.map((s) => ({
+          id: s.id,
+          label: s.label ?? undefined,
+          amount: Number(s.amount),
+          date: s.date,
+          category: mapCategory(s.categoryType, s.categoryId),
+          incomeMonth: s.incomeMonth ?? undefined,
+        }))
+      : undefined,
+  }));
+}
+
+export async function getIncomeDetailsForMonth(
+  month: string
+): Promise<{ amount: number; date: string }[]> {
+  const onBudget = await db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(eq(connections.isOnBudget, true));
+  const ids = onBudget.map((c) => c.id);
+  if (ids.length === 0) return [];
+
+  const rows = await db
+    .select({ amount: transactions.amount, date: transactions.date })
+    .from(transactions)
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        eq(transactions.categoryType, "income"),
+        eq(transactions.incomeMonth, month)
+      )
+    )
+    .orderBy(desc(transactions.date));
+
+  return rows.map((r) => ({ amount: Number(r.amount), date: r.date }));
+}
+
+export async function getEverythingElseForMonth(month: string): Promise<number> {
+  const { start, end } = getMonthDateRange(month);
+  const onBudget = await db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(eq(connections.isOnBudget, true));
+  const ids = onBudget.map((c) => c.id);
+  if (ids.length === 0) return 0;
+
+  const nonSplit = await db
+    .select({ total: sum(transactions.amount) })
+    .from(transactions)
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        gte(transactions.date, start),
+        lt(transactions.date, end),
+        eq(transactions.isSplit, false),
+        eq(transactions.categoryType, "everything_else")
+      )
+    );
+
+  const splitRows = await db
+    .select({ total: sum(transactionSplits.amount) })
+    .from(transactionSplits)
+    .innerJoin(transactions, eq(transactionSplits.transactionId, transactions.id))
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        gte(transactionSplits.date, start),
+        lt(transactionSplits.date, end),
+        eq(transactionSplits.categoryType, "everything_else")
+      )
+    );
+
+  return Math.abs(Number(nonSplit[0]?.total ?? 0)) + Math.abs(Number(splitRows[0]?.total ?? 0));
 }
 
 export async function getIncomeForMonth(month: string): Promise<number> {
