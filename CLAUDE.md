@@ -13,13 +13,24 @@ npm run dev          # Start development server
 npm run build        # Build for production
 npm run lint         # Run ESLint
 npm run start        # Start production server
-npm run db:push      # Push schema to database (dev)
 npm run db:generate  # Generate migration files
 npm run db:migrate   # Run migrations
 npm run db:studio    # Browse data in web UI
 npm run db:seed      # Seed database with mock data
 docker compose up -d # Start local PostgreSQL
 ```
+
+### Database Migration Workflow
+
+**IMPORTANT: Never use `drizzle-kit push` for schema changes.** Always use the migration workflow:
+
+1. Update schema in `lib/db/schema.ts`
+2. Run `npm run db:generate` to create a migration file
+3. Commit the `drizzle/` folder
+4. Deploy
+5. Run `npm run db:migrate` to apply
+
+This keeps local, Docker, and production databases in sync via committed migration files.
 
 ## Architecture
 
