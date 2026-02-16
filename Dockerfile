@@ -39,4 +39,4 @@ CMD ["node", "server.js"]
 # Migration runner (has full project + dev deps)
 FROM builder AS migrate
 WORKDIR /app
-CMD ["npx", "drizzle-kit", "push"]
+CMD ["npx", "drizzle-kit", "migrate"]
