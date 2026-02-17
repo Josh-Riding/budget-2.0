@@ -76,7 +76,7 @@ export function TransactionsTable({
 }: TransactionsTableProps) {
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
-  const [filterMonth, setFilterMonth] = useState<string>(initialMonth);
+  const [filterMonth, setFilterMonth] = useState<string>("All Months");
   const [filterCategory, setFilterCategory] = useState<string>("All Categories");
   const [filterType, setFilterType] = useState<string>("All");
   const [collapsedSplitRows, setCollapsedSplitRows] = useState<Set<string>>(
@@ -441,7 +441,9 @@ export function TransactionsTable({
             </SelectContent>
           </Select>
         </div>
-        <AddTransactionModal bills={bills} funds={funds} />
+        <div className="self-end">
+          <AddTransactionModal bills={bills} funds={funds} />
+        </div>
       </div>
 
       {/* Mobile Card Layout */}

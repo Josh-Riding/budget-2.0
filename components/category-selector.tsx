@@ -153,12 +153,12 @@ export function CategorySelector({
         <PopoverContent className="w-[200px] p-0">
           <Command>
             <CommandInput placeholder="Search category..." className="h-8" />
-            <CommandList>
+            <CommandList className="max-h-[40vh] overflow-y-auto">
               <CommandEmpty>No category found.</CommandEmpty>
+              {renderGroup("Other", otherOptions)}
               {isDeposit !== false && renderGroup("Income", incomeOptions)}
               {renderGroup("Bills", billOptions)}
               {renderGroup("Fund Spending", fundOptions)}
-              {renderGroup("Other", otherOptions)}
             </CommandList>
           </Command>
         </PopoverContent>
