@@ -38,6 +38,7 @@ export function AddTransactionModal({ bills, funds = [] }: AddTransactionModalPr
   const [category, setCategory] = useState<string | undefined>(undefined);
   const [incomeMonth, setIncomeMonth] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
@@ -48,6 +49,7 @@ export function AddTransactionModal({ bills, funds = [] }: AddTransactionModalPr
       setDate(new Date().toISOString().split("T")[0]);
       setCategory(undefined);
       setIncomeMonth(undefined);
+      setError(null);
     }
   };
 
@@ -55,23 +57,31 @@ export function AddTransactionModal({ bills, funds = [] }: AddTransactionModalPr
     if (!name || !amount) return;
 
     setSubmitting(true);
+    setError(null);
     const finalAmount = type === "withdrawal" ? -Math.abs(parseFloat(amount)) : Math.abs(parseFloat(amount));
 
-    const response = await fetch("/api/transactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        amount: finalAmount,
-        date,
-        category,
-        incomeMonth,
-      }),
-    });
+    try {
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          amount: finalAmount,
+          date,
+          category,
+          incomeMonth,
+        }),
+      });
 
-    if (response.ok) {
-      setOpen(false);
-      router.refresh();
+      if (response.ok) {
+        setOpen(false);
+        router.refresh();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setError(data.error || "Failed to save transaction. Please try again.");
+      }
+    } catch {
+      setError("Network error. Please try again.");
     }
     setSubmitting(false);
   };
@@ -153,6 +163,9 @@ export function AddTransactionModal({ bills, funds = [] }: AddTransactionModalPr
           </div>
         </div>
 
+        {error && (
+          <p className="text-sm text-red-500 text-center">{error}</p>
+        )}
         <Button onClick={handleSubmit} disabled={!name || !amount || submitting}>
           {submitting ? "Adding..." : "Add Transaction"}
         </Button>

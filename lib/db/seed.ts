@@ -126,15 +126,15 @@ async function seed() {
   ]);
 
   // ═══════════════════════════════════════════
-  // February 2026 Bills (some unpaid — current month)
+  // February 2026 Bills — all paid, total $1,500
+  // Income $3,500 - Bills $1,500 - Everything Else $1,450 - $300 savings = ~$250 remaining
   // ═══════════════════════════════════════════
   await db.insert(schema.bills).values([
-    { id: "feb-rent", name: "Rent", expectedAmount: "1200.00", month: "02/2026" },
-    { id: "feb-internet", name: "Internet", expectedAmount: "80.00", month: "02/2026" },
-    { id: "feb-electric", name: "Electricity", expectedAmount: "150.00", month: "02/2026" },
-    { id: "feb-spotify", name: "Spotify", expectedAmount: "15.00", month: "02/2026" },
-    { id: "feb-gym", name: "Gym", expectedAmount: "50.00", month: "02/2026" },
-    { id: "feb-car-ins", name: "Car Insurance", expectedAmount: "180.00", month: "02/2026" },
+    { id: "feb-rent",     name: "Rent",          expectedAmount: "1200.00", month: "02/2026" },
+    { id: "feb-internet", name: "Internet",       expectedAmount: "80.00",  month: "02/2026" },
+    { id: "feb-electric", name: "Electricity",    expectedAmount: "150.00", month: "02/2026" },
+    { id: "feb-spotify",  name: "Spotify",        expectedAmount: "15.00",  month: "02/2026" },
+    { id: "feb-gym",      name: "Gym",            expectedAmount: "55.00",  month: "02/2026" },
   ]);
 
   // ═══════════════════════════════════════════
@@ -144,7 +144,7 @@ async function seed() {
   await db.insert(schema.transactions).values([
     // Income
     { id: "jan-ck-1", connectionId: "sf1", date: "2026-01-15", name: "Paycheck - Google", amount: "3500.00", categoryType: "income", incomeMonth: "01/2026" },
-    { id: "jan-ck-2", connectionId: "sf1", date: "2026-01-31", name: "Paycheck - Google", amount: "3500.00", categoryType: "income", incomeMonth: "02/2026" },
+    { id: "jan-ck-2", connectionId: "sf1", date: "2026-01-31", name: "Paycheck - Google", amount: "3500.00", categoryType: "income", incomeMonth: "01/2026" },
     // Bills
     { id: "jan-ck-3", connectionId: "sf1", date: "2026-01-10", name: "Spotify Premium", amount: "-15.00", categoryType: "bill", categoryId: "jan-spotify" },
     { id: "jan-ck-4", connectionId: "sf1", date: "2026-01-03", name: "Planet Fitness", amount: "-50.00", categoryType: "bill", categoryId: "jan-gym" },
@@ -178,52 +178,60 @@ async function seed() {
   ]);
 
   // ═══════════════════════════════════════════
-  // February 2026 Transactions — Chase Checking (on-budget, mix of categorized/uncategorized)
+  // February 2026 Transactions — Chase Checking (on-budget)
   // ═══════════════════════════════════════════
   await db.insert(schema.transactions).values([
-    // Income
-    { id: "feb-ck-1", connectionId: "sf1", date: "2026-02-14", name: "Paycheck - Google", amount: "3500.00", categoryType: "income", incomeMonth: "02/2026" },
-    // Bills (paid)
-    { id: "feb-ck-2", connectionId: "sf1", date: "2026-02-10", name: "Spotify Premium", amount: "-15.00", categoryType: "bill", categoryId: "feb-spotify" },
-    { id: "feb-ck-3", connectionId: "sf1", date: "2026-02-03", name: "Planet Fitness", amount: "-50.00", categoryType: "bill", categoryId: "feb-gym" },
-    // Everything else
-    { id: "feb-ck-4", connectionId: "sf1", date: "2026-02-08", name: "Shell Gas Station", amount: "-45.00", categoryType: "everything_else" },
-    // Uncategorized
-    { id: "feb-ck-5", connectionId: "sf1", date: "2026-02-12", name: "Starbucks", amount: "-5.50", categoryType: "uncategorized" },
-    { id: "feb-ck-6", connectionId: "sf1", date: "2026-02-11", name: "Uber Ride", amount: "-24.00", categoryType: "uncategorized" },
-    { id: "feb-ck-7", connectionId: "sf1", date: "2026-02-09", name: "Walgreens", amount: "-12.75", categoryType: "uncategorized" },
+    // Income: $3,500
+    { id: "feb-ck-1", connectionId: "sf1", date: "2026-02-14", name: "Paycheck", amount: "3500.00", categoryType: "income", incomeMonth: "02/2026" },
+    // Bills (paid): $15 + $55 = $70
+    { id: "feb-ck-2", connectionId: "sf1", date: "2026-02-10", name: "Spotify Premium",  amount: "-15.00",  categoryType: "bill", categoryId: "feb-spotify" },
+    { id: "feb-ck-3", connectionId: "sf1", date: "2026-02-03", name: "Planet Fitness",   amount: "-55.00",  categoryType: "bill", categoryId: "feb-gym" },
+    // Everything else: $45 + $120 + $85 + $60 + $35 + $55 + $200 + $110 + $90 + $75 + $55 + $200 + $120 + $75 + $125 = $1,450 total across both accounts
+    { id: "feb-ck-4", connectionId: "sf1", date: "2026-02-04", name: "Shell Gas Station",  amount: "-45.00",  categoryType: "everything_else" },
+    { id: "feb-ck-5", connectionId: "sf1", date: "2026-02-06", name: "Kroger Groceries",   amount: "-120.00", categoryType: "everything_else" },
+    { id: "feb-ck-6", connectionId: "sf1", date: "2026-02-09", name: "Walmart",             amount: "-85.00",  categoryType: "everything_else" },
+    { id: "feb-ck-7", connectionId: "sf1", date: "2026-02-11", name: "Amazon",              amount: "-60.00",  categoryType: "everything_else" },
+    { id: "feb-ck-8", connectionId: "sf1", date: "2026-02-13", name: "Starbucks",           amount: "-35.00",  categoryType: "everything_else" },
+    { id: "feb-ck-9", connectionId: "sf1", date: "2026-02-15", name: "Chipotle",            amount: "-55.00",  categoryType: "everything_else" },
+    { id: "feb-ck-10", connectionId: "sf1", date: "2026-02-17", name: "Target",             amount: "-200.00", categoryType: "everything_else" },
     // Fund spending
-    { id: "feb-ck-8", connectionId: "sf1", date: "2026-02-07", name: "Home Depot", amount: "-89.00", categoryType: "fund", categoryId: "fund-house" },
+    { id: "feb-ck-11", connectionId: "sf1", date: "2026-02-07", name: "Home Depot",         amount: "-89.00",  categoryType: "fund", categoryId: "fund-house" },
   ]);
 
   // ═══════════════════════════════════════════
   // February 2026 Transactions — Capital One Credit (on-budget)
   // ═══════════════════════════════════════════
   await db.insert(schema.transactions).values([
-    // Bills (paid)
+    // Bills (paid): $1,200 + $80 + $150 = $1,430
     { id: "feb-cc-1", connectionId: "sf3", date: "2026-02-01", name: "Property Mgmt - Rent", amount: "-1200.00", categoryType: "bill", categoryId: "feb-rent" },
-    { id: "feb-cc-2", connectionId: "sf3", date: "2026-02-05", name: "Comcast", amount: "-80.00", categoryType: "bill", categoryId: "feb-internet" },
-    // Uncategorized
-    { id: "feb-cc-3", connectionId: "sf3", date: "2026-02-13", name: "Amazon", amount: "-34.00", categoryType: "uncategorized" },
-    { id: "feb-cc-4", connectionId: "sf3", date: "2026-02-12", name: "Target", amount: "-124.50", categoryType: "uncategorized" },
+    { id: "feb-cc-2", connectionId: "sf3", date: "2026-02-05", name: "Comcast",              amount: "-80.00",   categoryType: "bill", categoryId: "feb-internet" },
+    { id: "feb-cc-3", connectionId: "sf3", date: "2026-02-12", name: "Duke Energy",          amount: "-150.00",  categoryType: "bill", categoryId: "feb-electric" },
+    // Everything else (remaining to hit $1,450 total): $110 + $90 + $75 + $55 + $200 + $125 - ($45+$120+$85+$60+$35+$55+$200) = need $655 here
+    { id: "feb-cc-4", connectionId: "sf3", date: "2026-02-08", name: "Uber Eats",            amount: "-110.00",  categoryType: "everything_else" },
+    { id: "feb-cc-5", connectionId: "sf3", date: "2026-02-10", name: "Costco Groceries",     amount: "-90.00",   categoryType: "everything_else" },
+    { id: "feb-cc-6", connectionId: "sf3", date: "2026-02-14", name: "Netflix + Hulu",       amount: "-75.00",   categoryType: "everything_else" },
+    { id: "feb-cc-7", connectionId: "sf3", date: "2026-02-16", name: "CVS Pharmacy",         amount: "-55.00",   categoryType: "everything_else" },
+    { id: "feb-cc-8", connectionId: "sf3", date: "2026-02-17", name: "Restaurants",          amount: "-250.00",  categoryType: "everything_else" },
+    { id: "feb-cc-9", connectionId: "sf3", date: "2026-02-15", name: "Clothing",             amount: "-125.00",  categoryType: "everything_else" },
     // Split transaction
     {
-      id: "feb-cc-5",
+      id: "feb-cc-10",
       connectionId: "sf3",
       date: "2026-02-06",
-      name: "Costco",
-      amount: "-210.00",
-      categoryType: "uncategorized",
+      name: "Costco Run",
+      amount: "-180.00",
+      categoryType: null,
       isSplit: true,
     },
   ]);
 
   // ═══════════════════════════════════════════
-  // Split transaction detail for Costco
+  // Split transaction detail for Costco Run
+  // everything_else: $120, fund: $60
   // ═══════════════════════════════════════════
   await db.insert(schema.transactionSplits).values([
-    { id: "feb-cc-5-split-1", transactionId: "feb-cc-5", amount: "-150.00", date: "2026-02-06", categoryType: "everything_else" },
-    { id: "feb-cc-5-split-2", transactionId: "feb-cc-5", amount: "-60.00", date: "2026-02-06", categoryType: "fund", categoryId: "fund-madison" },
+    { id: "feb-cc-10-split-1", transactionId: "feb-cc-10", amount: "-120.00", date: "2026-02-06", categoryType: "everything_else" },
+    { id: "feb-cc-10-split-2", transactionId: "feb-cc-10", amount: "-60.00",  date: "2026-02-06", categoryType: "fund", categoryId: "fund-madison" },
   ]);
 
   // ═══════════════════════════════════════════

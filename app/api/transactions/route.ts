@@ -17,6 +17,7 @@ async function ensureManualConnection() {
     await db.insert(connections).values({
       id: MANUAL_CONNECTION_ID,
       name: "Manual",
+      displayName: "Manual",
       currentBalance: "0",
       isOnBudget: true,
     });

@@ -174,6 +174,15 @@ export function DashboardContent({
                 </div>
               </div>
 
+              <Link
+                href={`/breakdown?month=${month}`}
+                className="w-full"
+              >
+                <Button variant="outline" className="w-full text-xs">
+                  View Budget Breakdown
+                </Button>
+              </Link>
+
               <div className="grid grid-cols-2 gap-8 w-full border-t pt-6 bg-slate-50/50 rounded-lg p-4">
                 <div className="flex flex-col items-center gap-1">
                   <BillsModal

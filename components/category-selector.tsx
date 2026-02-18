@@ -109,12 +109,9 @@ export function CategorySelector({
         {options.map((category) => (
           <CommandItem
             key={category.value}
-            value={category.value}
+            value={category.label}
             className="py-1.5"
-            onSelect={(currentValue) => {
-               const matched = allOptions.find(c => c.value.toLowerCase() === currentValue.toLowerCase() || c.label.toLowerCase() === currentValue.toLowerCase());
-               handleSelect(matched ? matched.value : currentValue);
-            }}
+            onSelect={() => handleSelect(category.value)}
           >
             <Check
               className={cn(

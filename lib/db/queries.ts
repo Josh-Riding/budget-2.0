@@ -718,3 +718,67 @@ export async function getExpensesForMonth(month: string): Promise<number> {
 
   return Math.abs(Number(nonSplit[0]?.total ?? 0) + Number(splitRows[0]?.total ?? 0));
 }
+
+export async function getSpendingTransactionsForMonth(
+  month: string
+): Promise<{ id: string; date: string; name: string; amount: number; categoryType: string; categoryId: string | null }[]> {
+  const { start, end } = getMonthDateRange(month);
+  const onBudget = await db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(eq(connections.isOnBudget, true));
+  const ids = onBudget.map((c) => c.id);
+  if (ids.length === 0) return [];
+
+  const rows = await db
+    .select({
+      id: transactions.id,
+      date: transactions.date,
+      name: transactions.name,
+      amount: transactions.amount,
+      categoryType: transactions.categoryType,
+      categoryId: transactions.categoryId,
+    })
+    .from(transactions)
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        gte(transactions.date, start),
+        lt(transactions.date, end),
+        eq(transactions.isSplit, false),
+        sql`${transactions.categoryType} IN ('everything_else', 'fund')`
+      )
+    )
+    .orderBy(desc(transactions.date));
+
+  // Also get split sub-transactions for everything_else/fund
+  const splitRows = await db
+    .select({
+      id: transactionSplits.id,
+      date: transactionSplits.date,
+      name: transactions.name,
+      amount: transactionSplits.amount,
+      categoryType: transactionSplits.categoryType,
+      categoryId: transactionSplits.categoryId,
+    })
+    .from(transactionSplits)
+    .innerJoin(transactions, eq(transactionSplits.transactionId, transactions.id))
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        gte(transactionSplits.date, start),
+        lt(transactionSplits.date, end),
+        sql`${transactionSplits.categoryType} IN ('everything_else', 'fund')`
+      )
+    )
+    .orderBy(desc(transactionSplits.date));
+
+  return [...rows, ...splitRows].map((r) => ({
+    id: r.id,
+    date: r.date,
+    name: r.name,
+    amount: Math.abs(Number(r.amount)),
+    categoryType: r.categoryType ?? "everything_else",
+    categoryId: r.categoryId,
+  })).sort((a, b) => b.date.localeCompare(a.date));
+}
