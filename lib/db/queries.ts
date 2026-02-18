@@ -746,12 +746,12 @@ export async function getSpendingTransactionsForMonth(
         gte(transactions.date, start),
         lt(transactions.date, end),
         eq(transactions.isSplit, false),
-        sql`${transactions.categoryType} IN ('everything_else', 'fund')`
+        eq(transactions.categoryType, "everything_else")
       )
     )
     .orderBy(desc(transactions.date));
 
-  // Also get split sub-transactions for everything_else/fund
+  // Also get split sub-transactions for everything_else
   const splitRows = await db
     .select({
       id: transactionSplits.id,
@@ -768,7 +768,7 @@ export async function getSpendingTransactionsForMonth(
         inArray(transactions.connectionId, ids),
         gte(transactionSplits.date, start),
         lt(transactionSplits.date, end),
-        sql`${transactionSplits.categoryType} IN ('everything_else', 'fund')`
+        eq(transactionSplits.categoryType, "everything_else")
       )
     )
     .orderBy(desc(transactionSplits.date));
@@ -781,4 +781,67 @@ export async function getSpendingTransactionsForMonth(
     categoryType: r.categoryType ?? "everything_else",
     categoryId: r.categoryId,
   })).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export async function getFundTransactionsForMonth(
+  month: string
+): Promise<{ fundId: string; id: string; date: string; name: string; amount: number }[]> {
+  const { start, end } = getMonthDateRange(month);
+  const onBudget = await db
+    .select({ id: connections.id })
+    .from(connections)
+    .where(eq(connections.isOnBudget, true));
+  const ids = onBudget.map((c) => c.id);
+  if (ids.length === 0) return [];
+
+  const rows = await db
+    .select({
+      id: transactions.id,
+      date: transactions.date,
+      name: transactions.name,
+      amount: transactions.amount,
+      fundId: transactions.categoryId,
+    })
+    .from(transactions)
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        gte(transactions.date, start),
+        lt(transactions.date, end),
+        eq(transactions.isSplit, false),
+        eq(transactions.categoryType, "fund")
+      )
+    )
+    .orderBy(desc(transactions.date));
+
+  const splitRows = await db
+    .select({
+      id: transactionSplits.id,
+      date: transactionSplits.date,
+      name: transactions.name,
+      amount: transactionSplits.amount,
+      fundId: transactionSplits.categoryId,
+    })
+    .from(transactionSplits)
+    .innerJoin(transactions, eq(transactionSplits.transactionId, transactions.id))
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        gte(transactionSplits.date, start),
+        lt(transactionSplits.date, end),
+        eq(transactionSplits.categoryType, "fund")
+      )
+    )
+    .orderBy(desc(transactionSplits.date));
+
+  return [...rows, ...splitRows]
+    .filter((r) => r.fundId != null)
+    .map((r) => ({
+      fundId: r.fundId!,
+      id: r.id,
+      date: r.date,
+      name: r.name,
+      amount: Number(r.amount), // keep sign: negative = spending from fund
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date));
 }

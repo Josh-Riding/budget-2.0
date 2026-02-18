@@ -11,7 +11,6 @@ import { FundsSettingsModal } from "@/components/funds-settings-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { BudgetSummaryModal } from "@/components/budget-summary-modal";
 import { Lock, Settings } from "lucide-react";
 
 interface Fund {
@@ -122,16 +121,6 @@ export function DashboardContent({
             <CardContent className="flex flex-col items-center justify-center py-6 space-y-6 relative">
               {/* Top-right icons */}
               <div className="absolute top-4 right-4 flex items-center gap-1">
-                <BudgetSummaryModal
-                  month={month}
-                  income={income}
-                  incomeDetails={incomeDetails}
-                  billsTotal={billsTotal}
-                  billsPaid={billsPaid}
-                  bills={bills}
-                  everythingElseSpending={everythingElseSpending}
-                  totalRemainingCash={totalRemainingCash}
-                />
                 <Button
                   variant="ghost"
                   size="icon"

@@ -4,8 +4,8 @@ import {
   getIncomeDetailsForMonth,
   getBillsForMonth,
   getSpendingTransactionsForMonth,
-  getFunds,
-  getAppSetting,
+  getFundBalances,
+  getFundTransactionsForMonth,
 } from "@/lib/db/queries";
 
 export const dynamic = "force-dynamic";
@@ -24,24 +24,30 @@ export default async function BreakdownPage({ searchParams }: BreakdownPageProps
     params.month ||
     `${String(new Date().getMonth() + 1).padStart(2, "0")}/${new Date().getFullYear()}`;
 
-  const [incomeDetails, bills, spendingTxns, funds, savingsAmountStr] = await Promise.all([
+  const [incomeDetails, bills, spendingTxns, fundBalances, fundTxns] = await Promise.all([
     getIncomeDetailsForMonth(month),
     getBillsForMonth(month),
     getSpendingTransactionsForMonth(month),
-    getFunds(),
-    getAppSetting("monthly_savings"),
+    getFundBalances(),
+    getFundTransactionsForMonth(month),
   ]);
 
-  const fundMap = new Map(funds.map((f) => [f.id, f.name]));
-  const savings = savingsAmountStr ? parseFloat(savingsAmountStr) : 300;
+  const savings = 300;
 
   const totalIncome = incomeDetails.reduce((s, r) => s + r.amount, 0);
   const totalBillsExpected = bills.reduce((s, b) => s + b.expectedAmount, 0);
   const totalBillsPaid = bills.reduce((s, b) => s + (b.paidAmount ?? 0), 0);
   const totalSpending = spendingTxns.reduce((s, t) => s + t.amount, 0);
 
-  const totalOut = totalBillsExpected + totalSpending + savings;
-  const remaining = totalIncome - totalOut;
+  const totalRemaining = totalIncome - totalBillsExpected - totalSpending;
+  const remainingCash = totalRemaining - savings;
+
+  // Group fund transactions by fundId
+  const fundTxnMap = new Map<string, typeof fundTxns>();
+  for (const t of fundTxns) {
+    if (!fundTxnMap.has(t.fundId)) fundTxnMap.set(t.fundId, []);
+    fundTxnMap.get(t.fundId)!.push(t);
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 max-w-lg mx-auto">
@@ -86,36 +92,32 @@ export default async function BreakdownPage({ searchParams }: BreakdownPageProps
             const paid = bill.paidAmount && bill.paidAmount > 0;
             return (
               <div key={bill.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className={paid ? "line-through text-slate-400" : "text-slate-700"}>
+                <div className="flex items-center gap-2 min-w-0 flex-1 mr-3">
+                  <span className={`truncate ${paid ? "line-through text-slate-400" : "text-slate-700"}`}>
                     {bill.name}
                   </span>
                   {bill.date && (
-                    <span className="text-xs text-slate-400">paid {bill.date}</span>
+                    <span className="text-xs text-slate-400 shrink-0">paid {bill.date}</span>
                   )}
                 </div>
-                <div className="text-right">
-                  {paid ? (
-                    <span className="text-slate-400">${fmt(bill.paidAmount!)}</span>
-                  ) : (
-                    <span className="text-slate-700">${fmt(bill.expectedAmount)}</span>
-                  )}
-                </div>
+                <span className={`shrink-0 ${paid ? "text-slate-400" : "text-slate-700"}`}>
+                  ${fmt(paid ? bill.paidAmount! : bill.expectedAmount)}
+                </span>
               </div>
             );
           })}
-          <div className="flex justify-between px-4 py-3 text-sm bg-slate-50 rounded-b-lg">
+          <div className="flex justify-between px-4 py-3 text-sm bg-slate-50">
             <span className="text-slate-500 text-xs">Expected total</span>
             <span className="font-semibold text-slate-700">${fmt(totalBillsExpected)}</span>
           </div>
-          <div className="flex justify-between px-4 py-3 text-sm bg-slate-50">
+          <div className="flex justify-between px-4 py-3 text-sm bg-slate-50 rounded-b-lg">
             <span className="text-slate-500 text-xs">Paid so far</span>
             <span className="font-semibold text-slate-600">${fmt(totalBillsPaid)}</span>
           </div>
         </div>
       </section>
 
-      {/* Everything Else + Fund Spending */}
+      {/* Everything Else Spending */}
       <section className="mb-6">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Other Spending</h2>
         <div className="bg-white rounded-lg divide-y divide-slate-100 shadow-sm">
@@ -123,19 +125,10 @@ export default async function BreakdownPage({ searchParams }: BreakdownPageProps
             <div className="px-4 py-3 text-sm text-slate-400">No other spending</div>
           )}
           {spendingTxns.map((t) => (
-            <div key={t.id} className="flex items-center justify-between px-4 py-3 text-sm">
-              <div>
-                <span className="text-slate-700">{t.name}</span>
-                {t.categoryType === "fund" && t.categoryId && (
-                  <span className="ml-2 text-xs text-violet-500">
-                    {fundMap.get(t.categoryId) ?? t.categoryId}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-400">{t.date}</span>
-                <span className="text-slate-700">${fmt(t.amount)}</span>
-              </div>
+            <div key={t.id} className="flex items-center justify-between px-4 py-3 text-sm gap-3">
+              <span className="text-slate-700 truncate flex-1 min-w-0">{t.name}</span>
+              <span className="text-xs text-slate-400 shrink-0">{t.date}</span>
+              <span className="text-slate-700 shrink-0">${fmt(t.amount)}</span>
             </div>
           ))}
           <div className="flex justify-between px-4 py-3 text-sm font-semibold bg-slate-50 rounded-b-lg">
@@ -144,6 +137,44 @@ export default async function BreakdownPage({ searchParams }: BreakdownPageProps
           </div>
         </div>
       </section>
+
+      {/* Funds */}
+      {fundBalances.filter((f) => f.balance !== 0 || fundTxnMap.has(f.fundId)).length > 0 && (
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Funds</h2>
+          <div className="space-y-3">
+            {fundBalances.map((f) => {
+              const txns = fundTxnMap.get(f.fundId) ?? [];
+              const monthActivity = txns.reduce((s, t) => s + t.amount, 0);
+              const startingBalance = f.balance - monthActivity;
+              return (
+                <div key={f.fundId} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                  <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-b border-slate-100">
+                    <span className="text-sm font-semibold text-slate-700">{f.name}</span>
+                    <div className="flex items-center gap-3 text-xs text-slate-500">
+                      <span>Start: <span className="font-medium text-slate-600">${fmt(startingBalance)}</span></span>
+                      <span>Now: <span className={`font-semibold ${f.balance >= 0 ? "text-emerald-600" : "text-red-500"}`}>${fmt(f.balance)}</span></span>
+                    </div>
+                  </div>
+                  {txns.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-slate-400">No activity this month</div>
+                  ) : (
+                    txns.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between px-4 py-2.5 text-sm border-b border-slate-50 gap-3">
+                        <span className="text-slate-700 truncate flex-1 min-w-0">{t.name}</span>
+                        <span className="text-xs text-slate-400 shrink-0">{t.date}</span>
+                        <span className={`shrink-0 font-medium ${t.amount >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                          {t.amount >= 0 ? "+" : ""}${fmt(Math.abs(t.amount))}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Summary */}
       <section>
@@ -161,14 +192,20 @@ export default async function BreakdownPage({ searchParams }: BreakdownPageProps
             <span className="text-slate-500">Other Spending</span>
             <span className="text-red-500">− ${fmt(totalSpending)}</span>
           </div>
+          <div className="flex justify-between px-4 py-3 text-sm font-semibold">
+            <span className="text-slate-600">Total Remaining</span>
+            <span className={totalRemaining >= 0 ? "text-slate-700" : "text-red-500"}>
+              ${fmt(totalRemaining)}
+            </span>
+          </div>
           <div className="flex justify-between px-4 py-3 text-sm">
             <span className="text-slate-500">Savings</span>
             <span className="text-red-500">− ${fmt(savings)}</span>
           </div>
           <div className="flex justify-between px-4 py-4 font-bold text-base bg-slate-50 rounded-b-lg">
-            <span>Remaining</span>
-            <span className={remaining >= 0 ? "text-emerald-600" : "text-red-500"}>
-              ${fmt(remaining)}
+            <span>Remaining Cash</span>
+            <span className={remainingCash >= 0 ? "text-emerald-600" : "text-red-500"}>
+              ${fmt(remainingCash)}
             </span>
           </div>
         </div>
