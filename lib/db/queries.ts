@@ -349,9 +349,36 @@ export async function getFundBalances(): Promise<
         .groupBy(transactions.categoryId)
     : [];
 
+  // Also count fund-tagged splits — splits store positive amounts so derive
+  // sign from parent transaction amount (withdrawal = negative, deposit = positive)
+  const fundSplitSpending = onBudgetIds.length > 0
+    ? await db
+        .select({
+          fundId: transactionSplits.categoryId,
+          splitAmount: transactionSplits.amount,
+          parentAmount: transactions.amount,
+        })
+        .from(transactionSplits)
+        .innerJoin(transactions, eq(transactionSplits.transactionId, transactions.id))
+        .where(
+          and(
+            inArray(transactions.connectionId, onBudgetIds),
+            eq(transactionSplits.categoryType, "fund")
+          )
+        )
+    : [];
+
   const spendingMap = new Map(
     fundSpending.map((s) => [s.fundId, Number(s.total ?? 0)])
   );
+
+  // Apply signed split amounts into the spending map
+  for (const row of fundSplitSpending) {
+    if (!row.fundId) continue;
+    const parentSign = Number(row.parentAmount) < 0 ? -1 : 1;
+    const signedAmount = Math.abs(Number(row.splitAmount)) * parentSign;
+    spendingMap.set(row.fundId, (spendingMap.get(row.fundId) ?? 0) + signedAmount);
+  }
 
   const settingsMap = new Map(
     settings.map((s) => [s.fundId, s])
@@ -819,7 +846,8 @@ export async function getFundTransactionsForMonth(
       id: transactionSplits.id,
       date: transactionSplits.date,
       name: transactions.name,
-      amount: transactionSplits.amount,
+      splitAmount: transactionSplits.amount,
+      parentAmount: transactions.amount,
       fundId: transactionSplits.categoryId,
     })
     .from(transactionSplits)
@@ -834,14 +862,29 @@ export async function getFundTransactionsForMonth(
     )
     .orderBy(desc(transactionSplits.date));
 
-  return [...rows, ...splitRows]
+  const nonSplitMapped = rows
     .filter((r) => r.fundId != null)
     .map((r) => ({
       fundId: r.fundId!,
       id: r.id,
       date: r.date,
       name: r.name,
-      amount: Number(r.amount), // keep sign: negative = spending from fund
-    }))
-    .sort((a, b) => b.date.localeCompare(a.date));
+      amount: Number(r.amount),
+    }));
+
+  // Splits store positive amounts — derive sign from parent transaction
+  const splitMapped = splitRows
+    .filter((r) => r.fundId != null)
+    .map((r) => {
+      const parentSign = Number(r.parentAmount) < 0 ? -1 : 1;
+      return {
+        fundId: r.fundId!,
+        id: r.id,
+        date: r.date,
+        name: r.name,
+        amount: Math.abs(Number(r.splitAmount)) * parentSign,
+      };
+    });
+
+  return [...nonSplitMapped, ...splitMapped].sort((a, b) => b.date.localeCompare(a.date));
 }
