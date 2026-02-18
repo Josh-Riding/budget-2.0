@@ -60,11 +60,14 @@ export default async function Dashboard({ searchParams }: DashboardProps) {
   // Networth = sum of all connection balances
   const networth = allConnections.reduce((s, c) => s + c.currentBalance, 0);
 
-  // Remaining cash = income - expenses - unpaid bills - $300 savings
-  const remainingCash = income - expenses - unpaidBillsTotal - 300;
+  // Total bills expected regardless of paid status
+  const totalBillsExpected = monthBills.reduce((s, b) => s + b.expectedAmount, 0);
 
-  // Total remaining = income minus all actual transactions for the month
-  const totalRemainingCash = income - expenses;
+  // Total remaining = income minus ALL expected bills minus actual misc spending
+  const totalRemainingCash = income - totalBillsExpected - everythingElseSpending;
+
+  // Remaining cash = total remaining minus $300 savings auto-transfer
+  const remainingCash = totalRemainingCash - 300;
 
   return (
     <DashboardContent
