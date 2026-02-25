@@ -804,7 +804,7 @@ export async function getSpendingTransactionsForMonth(
     id: r.id,
     date: r.date,
     name: r.name,
-    amount: Math.abs(Number(r.amount)),
+    amount: Number(r.amount),
     categoryType: r.categoryType ?? "everything_else",
     categoryId: r.categoryId,
   })).sort((a, b) => b.date.localeCompare(a.date));
