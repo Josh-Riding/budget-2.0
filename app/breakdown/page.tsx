@@ -37,9 +37,7 @@ export default async function BreakdownPage({ searchParams }: BreakdownPageProps
   const totalIncome = incomeDetails.reduce((s, r) => s + r.amount, 0);
   const totalBillsExpected = bills.reduce((s, b) => s + b.expectedAmount, 0);
   const totalBillsPaid = bills.reduce((s, b) => s + (b.paidAmount ?? 0), 0);
-  // amounts are signed: expenses are negative, deposits are positive
-  // negate the sum so expenses show as a positive "spending" total (deposits reduce it)
-  const totalSpending = -spendingTxns.reduce((s, t) => s + t.amount, 0);
+  const totalSpending = spendingTxns.reduce((s, t) => s + t.amount, 0);
 
   const totalRemaining = totalIncome - totalBillsExpected - totalSpending;
   const remainingCash = totalRemaining - savings;
@@ -130,9 +128,7 @@ export default async function BreakdownPage({ searchParams }: BreakdownPageProps
             <div key={t.id} className="flex items-center justify-between px-4 py-3 text-sm gap-3">
               <span className="text-slate-700 truncate flex-1 min-w-0">{t.name}</span>
               <span className="text-xs text-slate-400 shrink-0">{t.date}</span>
-              <span className={`shrink-0 ${t.amount > 0 ? "text-emerald-600" : "text-slate-700"}`}>
-                {t.amount > 0 ? "+" : ""}${fmt(Math.abs(t.amount))}
-              </span>
+              <span className="text-slate-700 shrink-0">${fmt(t.amount)}</span>
             </div>
           ))}
           <div className="flex justify-between px-4 py-3 text-sm font-semibold bg-slate-50 rounded-b-lg">
