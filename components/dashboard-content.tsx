@@ -81,7 +81,7 @@ export function DashboardContent({
   const rightFunds = fundBalances.filter((f) => f.position === "right");
 
   // Total saved this month for seal modal
-  const totalSaved = Math.max(0, remainingCash);
+  const totalSaved = Math.max(0, totalRemainingCash);
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 md:p-10">
