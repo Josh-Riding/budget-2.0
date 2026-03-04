@@ -144,23 +144,23 @@ export function DashboardContent({
                   </div>
                 </Link>
 
-                <div className="flex flex-col items-center">
+                <Link href={`/transactions?month=${month}`} className="flex flex-col items-center">
                   <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">
                     Remaining Cash
                   </span>
                   <div className="text-4xl font-bold text-slate-800 tracking-tight">
                     ${remainingCash.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </div>
-                </div>
+                </Link>
 
-                <div className="flex flex-col items-center">
+                <Link href={`/transactions?month=${month}`} className="flex flex-col items-center">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
                     Total Remaining
                   </span>
                   <div className="text-2xl font-bold text-slate-600 tracking-tight">
                     ${totalRemainingCash.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </div>
-                </div>
+                </Link>
               </div>
 
               <Link
