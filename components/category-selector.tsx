@@ -65,6 +65,7 @@ export function CategorySelector({
   }));
 
   const otherOptions = [
+    { value: "uncategorized", label: "Uncategorize" },
     { value: "everything_else", label: "Everything Else" },
     { value: "ignore", label: "Ignore" },
   ];
