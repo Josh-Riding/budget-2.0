@@ -800,14 +800,25 @@ export async function getSpendingTransactionsForMonth(
     )
     .orderBy(desc(transactionSplits.date));
 
-  return [...rows, ...splitRows].map((r) => ({
+  const nonSplitMapped = rows.map((r) => ({
     id: r.id,
     date: r.date,
     name: r.name,
-    amount: Math.abs(Number(r.amount)),
+    amount: Number(r.amount), // keep sign: negative = expense, positive = refund
     categoryType: r.categoryType ?? "everything_else",
     categoryId: r.categoryId,
-  })).sort((a, b) => b.date.localeCompare(a.date));
+  }));
+
+  const splitMapped = splitRows.map((r) => ({
+    id: r.id,
+    date: r.date,
+    name: r.name,
+    amount: -Math.abs(Number(r.amount)), // splits stored positive but are expenses
+    categoryType: r.categoryType ?? "everything_else",
+    categoryId: r.categoryId,
+  }));
+
+  return [...nonSplitMapped, ...splitMapped].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export async function getFundTransactionsForMonth(

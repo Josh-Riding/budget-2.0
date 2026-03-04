@@ -37,7 +37,8 @@ export default async function BreakdownPage({ searchParams }: BreakdownPageProps
   const totalIncome = incomeDetails.reduce((s, r) => s + r.amount, 0);
   const totalBillsExpected = bills.reduce((s, b) => s + b.expectedAmount, 0);
   const totalBillsPaid = bills.reduce((s, b) => s + (b.paidAmount ?? 0), 0);
-  const totalSpending = spendingTxns.reduce((s, t) => s + t.amount, 0);
+  // amounts are signed (negative = expense, positive = refund); negate sum to get positive spending figure
+  const totalSpending = -spendingTxns.reduce((s, t) => s + t.amount, 0);
 
   const totalRemaining = totalIncome - totalBillsExpected - totalSpending;
   const remainingCash = totalRemaining - savings;
@@ -124,13 +125,18 @@ export default async function BreakdownPage({ searchParams }: BreakdownPageProps
           {spendingTxns.length === 0 && (
             <div className="px-4 py-3 text-sm text-slate-400">No other spending</div>
           )}
-          {spendingTxns.map((t) => (
-            <div key={t.id} className="flex items-center justify-between px-4 py-3 text-sm gap-3">
-              <span className="text-slate-700 truncate flex-1 min-w-0">{t.name}</span>
-              <span className="text-xs text-slate-400 shrink-0">{t.date}</span>
-              <span className="text-slate-700 shrink-0">${fmt(t.amount)}</span>
-            </div>
-          ))}
+          {spendingTxns.map((t) => {
+            const isRefund = t.amount > 0;
+            return (
+              <div key={t.id} className="flex items-center justify-between px-4 py-3 text-sm gap-3">
+                <span className="text-slate-700 truncate flex-1 min-w-0">{t.name}</span>
+                <span className="text-xs text-slate-400 shrink-0">{t.date}</span>
+                <span className={`shrink-0 ${isRefund ? "text-emerald-600" : "text-slate-700"}`}>
+                  {isRefund ? "+" : ""}${fmt(Math.abs(t.amount))}
+                </span>
+              </div>
+            );
+          })}
           <div className="flex justify-between px-4 py-3 text-sm font-semibold bg-slate-50 rounded-b-lg">
             <span>Total Other Spending</span>
             <span className="text-slate-700">${fmt(totalSpending)}</span>
