@@ -10,8 +10,9 @@ import { SealMonthModal } from "@/components/seal-month-modal";
 import { FundsSettingsModal } from "@/components/funds-settings-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Link from "next/link";
-import { Lock, Settings } from "lucide-react";
+import { Lock, RefreshCw, Settings } from "lucide-react";
 
 interface Fund {
   id: string;
@@ -62,6 +63,19 @@ export function DashboardContent({
 }: DashboardContentProps) {
   const router = useRouter();
   const [fundsModalOpen, setFundsModalOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ accounts: number; transactions: number } | null>(null);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    const res = await fetch("/api/simplefin/sync", { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setSyncResult({ accounts: data.accounts, transactions: data.transactions });
+      router.refresh();
+    }
+    setSyncing(false);
+  };
 
   // Parse month for MonthSelector
   const [mm, yyyy] = month.split("/");
@@ -119,6 +133,19 @@ export function DashboardContent({
           {/* Center Card: Main Financials */}
           <Card className="col-span-1 md:col-span-1 lg:col-span-3 border-slate-200 shadow-md order-1 lg:order-2">
             <CardContent className="flex flex-col items-center justify-center py-6 space-y-6 relative">
+              {/* Top-left sync button */}
+              <div className="absolute top-4 left-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-slate-700"
+                  onClick={handleSync}
+                  disabled={syncing}
+                >
+                  <RefreshCw className={`h-5 w-5 ${syncing ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+
               {/* Top-right icons */}
               <div className="absolute top-4 right-4 flex items-center gap-1">
                 <Button
@@ -269,6 +296,23 @@ export function DashboardContent({
 
       {/* Funds Settings Modal */}
       <FundsSettingsModal open={fundsModalOpen} onOpenChange={setFundsModalOpen} />
+
+      {/* Sync Result Modal */}
+      <Dialog open={!!syncResult} onOpenChange={() => setSyncResult(null)}>
+        <DialogContent className="sm:max-w-[320px]">
+          <DialogHeader>
+            <DialogTitle>Sync Complete</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1 text-sm text-slate-600 py-2">
+            <p>{syncResult?.accounts} account{syncResult?.accounts !== 1 ? "s" : ""} synced</p>
+            <p className={syncResult?.transactions ? "text-emerald-600 font-semibold" : ""}>
+              {syncResult?.transactions
+                ? `${syncResult.transactions} new transaction${syncResult.transactions !== 1 ? "s" : ""} added`
+                : "No new transactions"}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

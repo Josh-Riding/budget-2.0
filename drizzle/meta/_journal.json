@@ -8,6 +8,13 @@
       "when": 1771212350889,
       "tag": "0000_wise_zeigeist",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773434804064,
+      "tag": "0001_bitter_mole_man",
+      "breakpoints": true
     }
   ]
 }

@@ -39,6 +39,7 @@ export async function POST() {
         await db.insert(connections).values({
           id: account.id,
           name: account.name,
+          displayName: account.name,
           currentBalance: account.balance,
           isOnBudget: true,
           lastSyncedAt: new Date(),
