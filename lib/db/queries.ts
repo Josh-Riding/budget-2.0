@@ -587,7 +587,23 @@ export async function getIncomeDetailsForMonth(
     )
     .orderBy(desc(transactions.date));
 
-  return rows.map((r) => ({ amount: Number(r.amount), date: r.date }));
+  const splitRows = await db
+    .select({ amount: transactionSplits.amount, date: transactionSplits.date })
+    .from(transactionSplits)
+    .innerJoin(transactions, eq(transactionSplits.transactionId, transactions.id))
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        eq(transactionSplits.categoryType, "income"),
+        eq(transactionSplits.incomeMonth, month)
+      )
+    )
+    .orderBy(desc(transactionSplits.date));
+
+  return [
+    ...rows.map((r) => ({ amount: Number(r.amount), date: r.date })),
+    ...splitRows.map((r) => ({ amount: Number(r.amount), date: r.date })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export async function getEverythingElseForMonth(month: string): Promise<number> {
@@ -646,7 +662,20 @@ export async function getIncomeForMonth(month: string): Promise<number> {
         eq(transactions.incomeMonth, month)
       )
     );
-  return Number(result[0]?.total ?? 0);
+
+  const splitResult = await db
+    .select({ total: sum(transactionSplits.amount) })
+    .from(transactionSplits)
+    .innerJoin(transactions, eq(transactionSplits.transactionId, transactions.id))
+    .where(
+      and(
+        inArray(transactions.connectionId, ids),
+        eq(transactionSplits.categoryType, "income"),
+        eq(transactionSplits.incomeMonth, month)
+      )
+    );
+
+  return Number(result[0]?.total ?? 0) + Number(splitResult[0]?.total ?? 0);
 }
 
 export async function getFundSettings(): Promise<
