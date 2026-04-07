@@ -394,8 +394,8 @@ export async function getFundBalances(): Promise<
 
   return allFunds.map((f) => {
     const setting = settingsMap.get(f.id);
-    const startingBalance = setting?.overrideAmount != null ? Number(setting.overrideAmount) : (allocMap.get(f.id) ?? 0);
-    const balance = startingBalance + (spendingMap.get(f.id) ?? 0);
+    const overrideBase = setting?.overrideAmount != null ? Number(setting.overrideAmount) : 0;
+    const balance = overrideBase + (allocMap.get(f.id) ?? 0) + (spendingMap.get(f.id) ?? 0);
 
     return {
       fundId: f.id,
