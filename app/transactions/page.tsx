@@ -7,6 +7,7 @@ import {
   getBillsForMonth,
   getFunds,
   getSimpleFinConnections,
+  getDistinctTransactionMonths,
 } from "@/lib/db/queries";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { ArrowLeft } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 interface TransactionsPageProps {
-  searchParams: Promise<{ month?: string; filter?: string }>;
+  searchParams: Promise<{ month?: string; filter?: string; category?: string }>;
 }
 
 export default async function TransactionsPage({
@@ -24,8 +25,9 @@ export default async function TransactionsPage({
   const params = await searchParams;
   const month = params.month;
   const filter = params.filter;
+  const category = params.category ?? (filter === "income" ? "income" : undefined);
 
-  const [transactions, bills, funds, allConnections] = await Promise.all([
+  const [transactions, bills, funds, allConnections, availableMonths] = await Promise.all([
     filter === "income" && month
       ? getIncomeTransactionsForMonth(month)
       : month
@@ -34,6 +36,7 @@ export default async function TransactionsPage({
     month ? getBillsForMonth(month) : getBills(),
     getFunds(),
     getSimpleFinConnections(),
+    getDistinctTransactionMonths(),
   ]);
 
   const connectionNames: Record<string, string> = {};
@@ -55,11 +58,14 @@ export default async function TransactionsPage({
         <div className="rounded-xl border bg-card text-card-foreground shadow">
           <div className="p-6">
             <TransactionsTable
+              key={month ?? "all"}
               transactions={transactions}
               bills={bills}
               funds={funds}
               connectionNames={connectionNames}
               initialMonth={month}
+              initialCategory={category}
+              availableMonths={availableMonths}
             />
           </div>
         </div>

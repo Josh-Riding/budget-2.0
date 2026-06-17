@@ -265,7 +265,7 @@ export function DashboardContent({
               </Badge>
             </Link>
           ) : uncategorizedCount > 0 ? (
-            <Link href={`/transactions?month=${month}`}>
+            <Link href={`/transactions?month=${month}&category=uncategorized`}>
               <Button
                 variant="outline"
                 size="lg"

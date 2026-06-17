@@ -38,6 +38,8 @@ interface TransactionsTableProps {
   funds?: { id: string; name: string }[];
   connectionNames?: Record<string, string>;
   initialMonth?: string;
+  initialCategory?: string;
+  availableMonths?: string[];
 }
 
 function getCategoryDisplayName(
@@ -73,16 +75,29 @@ export function TransactionsTable({
   funds = [],
   connectionNames = {},
   initialMonth = "All Months",
+  initialCategory,
+  availableMonths,
 }: TransactionsTableProps) {
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
-  const [filterMonth, setFilterMonth] = useState<string>("All Months");
-  const [filterCategory, setFilterCategory] = useState<string>("All Categories");
+  const [filterMonth, setFilterMonth] = useState<string>(initialMonth);
+  const [filterCategory, setFilterCategory] = useState<string>(
+    initialCategory ? getCategoryDisplayName(initialCategory, bills, funds) : "All Categories"
+  );
   const [filterType, setFilterType] = useState<string>("All");
   const [collapsedSplitRows, setCollapsedSplitRows] = useState<Set<string>>(
     () => new Set(initialTransactions.filter((t) => t.isSplit).map((t) => t.id))
   );
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const handleMonthChange = (value: string) => {
+    if (availableMonths) {
+      const url = value === "All Months" ? "/transactions" : `/transactions?month=${value}`;
+      router.push(url);
+    } else {
+      setFilterMonth(value);
+    }
+  };
 
   // Extract distinct months and categories from transactions
   const distinctMonths = useMemo(() => {
@@ -101,21 +116,16 @@ export function TransactionsTable({
   }, [initialTransactions]);
 
   const distinctCategories = useMemo(() => {
-    const categories = new Set<string>();
+    const names = new Set<string>();
     initialTransactions.forEach((t) => {
-      if (t.category) categories.add(t.category);
+      if (t.category) names.add(getCategoryDisplayName(t.category, bills, funds));
       if (t.splits) {
         t.splits.forEach((s) => {
-          if (s.category) categories.add(s.category);
+          if (s.category) names.add(getCategoryDisplayName(s.category, bills, funds));
         });
       }
     });
-    return Array.from(categories)
-      .sort((a, b) => {
-        const nameA = getCategoryDisplayName(a, bills, funds);
-        const nameB = getCategoryDisplayName(b, bills, funds);
-        return nameA.localeCompare(nameB);
-      });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [initialTransactions, bills, funds]);
 
   // Apply filters
@@ -125,14 +135,14 @@ export function TransactionsTable({
       const monthMatch =
         filterMonth === "All Months" || tMonth === filterMonth;
 
-      // Check if transaction or any split matches category filter
+      // Check if transaction or any split matches category filter (compare by display name)
       let categoryMatch = filterCategory === "All Categories";
       if (!categoryMatch) {
-        if (t.category === filterCategory) categoryMatch = true;
+        if (getCategoryDisplayName(t.category ?? "", bills, funds) === filterCategory) categoryMatch = true;
         if (t.splits) {
           categoryMatch =
             categoryMatch ||
-            t.splits.some((s) => s.category === filterCategory);
+            t.splits.some((s) => getCategoryDisplayName(s.category ?? "", bills, funds) === filterCategory);
         }
       }
 
@@ -398,15 +408,15 @@ export function TransactionsTable({
       <div className="flex flex-wrap gap-2 sm:gap-4 items-end">
         <div className="flex-1 min-w-[100px]">
           <label className="text-sm font-medium mb-2 block">Month</label>
-          <Select value={filterMonth} onValueChange={setFilterMonth}>
+          <Select value={filterMonth} onValueChange={handleMonthChange}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All Months">All Months</SelectItem>
-              {distinctMonths.map((month) => (
-                <SelectItem key={month} value={month}>
-                  {month}
+              {(availableMonths ?? distinctMonths).map((m) => (
+                <SelectItem key={m} value={m}>
+                  {m}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -420,9 +430,9 @@ export function TransactionsTable({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All Categories">All Categories</SelectItem>
-              {distinctCategories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {getCategoryDisplayName(category, bills, funds)}
+              {distinctCategories.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
                 </SelectItem>
               ))}
             </SelectContent>

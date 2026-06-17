@@ -928,3 +928,15 @@ export async function getFundTransactionsForMonth(
 
   return [...nonSplitMapped, ...splitMapped].sort((a, b) => b.date.localeCompare(a.date));
 }
+
+export async function getDistinctTransactionMonths(): Promise<string[]> {
+  const rows = await db.execute(
+    sql`SELECT to_char(date_trunc('month', t.date), 'MM/YYYY') as month
+        FROM transactions t
+        INNER JOIN connections c ON t.connection_id = c.id
+        WHERE c.is_on_budget = true
+        GROUP BY date_trunc('month', t.date)
+        ORDER BY date_trunc('month', t.date) DESC`
+  );
+  return (rows.rows as { month: string }[]).map((r) => r.month);
+}
