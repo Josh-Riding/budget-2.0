@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Split, ArrowDown01, X, ChevronDown, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, monthKey, parseLocalDate } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -103,11 +103,11 @@ export function TransactionsTable({
   const distinctMonths = useMemo(() => {
     const months = new Set<string>();
     initialTransactions.forEach((t) => {
-      const monthStr = format(new Date(t.date), "MM/yyyy");
+      const monthStr = monthKey(t.date);
       months.add(monthStr);
       if (t.splits) {
         t.splits.forEach((s) => {
-          const splitMonth = format(new Date(s.date), "MM/yyyy");
+          const splitMonth = monthKey(s.date);
           months.add(splitMonth);
         });
       }
@@ -131,7 +131,7 @@ export function TransactionsTable({
   // Apply filters
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
-      const tMonth = format(new Date(t.date), "MM/yyyy");
+      const tMonth = monthKey(t.date);
       const monthMatch =
         filterMonth === "All Months" || tMonth === filterMonth;
 
@@ -468,7 +468,7 @@ export function TransactionsTable({
               {/* Row 1: Date + Amount */}
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(transaction.date), "MMM d, yyyy")}
+                  {format(parseLocalDate(transaction.date), "MMM d, yyyy")}
                 </span>
                 <span className={cn("text-sm font-semibold", isDeposit ? "text-emerald-600" : "text-slate-900")}>
                   {isDeposit ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
@@ -652,7 +652,7 @@ export function TransactionsTable({
               <React.Fragment key={transaction.id}>
                 <TableRow className={cn(transaction.isSplit && !isSplitCollapsed && "border-b-0", transaction.isSplit && isSplitCollapsed && "bg-muted/20")}>
                   <TableCell className="font-medium">
-                    {format(new Date(transaction.date), "MMM d, yyyy")}
+                    {format(parseLocalDate(transaction.date), "MMM d, yyyy")}
                   </TableCell>
                   <TableCell>
                     <div className="max-w-[300px] truncate" title={transaction.name}>{transaction.name}</div>

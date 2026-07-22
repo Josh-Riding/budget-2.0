@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Bill } from "@/lib/types";
+import { parseLocalDate } from "@/lib/utils";
 
 interface BillsModalProps {
   currentMonth: Date;
@@ -218,7 +219,7 @@ export function BillsModal({ currentMonth, bills: initialBills }: BillsModalProp
                       <div>
                         <span className="text-xs text-muted-foreground block">Date</span>
                         <span className="mt-0.5 block text-muted-foreground">
-                          {bill.date ? new Date(bill.date).toLocaleDateString() : "-"}
+                          {bill.date ? parseLocalDate(bill.date).toLocaleDateString() : "-"}
                         </span>
                       </div>
                     </div>
@@ -306,7 +307,7 @@ export function BillsModal({ currentMonth, bills: initialBills }: BillsModalProp
                         {bill.paidAmount ? `$${bill.paidAmount.toFixed(2)}` : "-"}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">
-                        {bill.date ? new Date(bill.date).toLocaleDateString() : "-"}
+                        {bill.date ? parseLocalDate(bill.date).toLocaleDateString() : "-"}
                       </TableCell>
                       <TableCell>
                         <Button

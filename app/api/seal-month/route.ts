@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { fundAllocations, sealedMonths } from "@/lib/db/schema";
 import { getUncategorizedCount, isMonthSealed } from "@/lib/db/queries";
+import { buildFundAllocationInserts } from "@/lib/allocations";
 import { randomUUID } from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -54,18 +55,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Only insert non-zero allocations. A zero/negative month yields an empty
+  // list — inserting an empty array would throw, so guard on the filtered rows.
+  const allocationRows = buildFundAllocationInserts(month, allocations);
+
   // Insert allocations + sealed month in a transaction
   await db.transaction(async (tx) => {
-    if (allocations.length > 0) {
+    if (allocationRows.length > 0) {
       await tx.insert(fundAllocations).values(
-        allocations
-          .filter((a) => a.amount !== 0)
-          .map((a) => ({
-            id: randomUUID(),
-            fundId: a.fundId,
-            month,
-            amount: String(a.amount),
-          }))
+        allocationRows.map((r) => ({
+          id: randomUUID(),
+          ...r,
+        }))
       );
     }
 

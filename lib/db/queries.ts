@@ -16,6 +16,7 @@ import type {
   Transaction,
   Bill,
 } from "@/lib/types";
+import { getMonthDateRange } from "@/lib/utils";
 
 function mapCategory(
   categoryType: string | null,
@@ -44,17 +45,6 @@ export function parseCategory(category: string): {
     return { categoryType: "fund", categoryId: fundId };
   }
   return { categoryType: "bill", categoryId: category };
-}
-
-function getMonthDateRange(month: string): { start: string; end: string } {
-  const [mm, yyyy] = month.split("/");
-  const year = parseInt(yyyy);
-  const mon = parseInt(mm);
-  const start = `${yyyy}-${mm}-01`;
-  const nextMonth = mon === 12 ? 1 : mon + 1;
-  const nextYear = mon === 12 ? year + 1 : year;
-  const end = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
-  return { start, end };
 }
 
 export async function getSimpleFinConnections(): Promise<

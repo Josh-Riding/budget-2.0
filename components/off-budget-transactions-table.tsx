@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/utils";
 
 interface OffBudgetTransactionsTableProps {
   transactions: Transaction[];
@@ -38,7 +39,7 @@ export function OffBudgetTransactionsTable({ transactions }: OffBudgetTransactio
             transactions.map((transaction) => (
               <TableRow key={transaction.id}>
                 <TableCell className="font-medium">
-                  {format(new Date(transaction.date), "MMM d, yyyy")}
+                  {format(parseLocalDate(transaction.date), "MMM d, yyyy")}
                 </TableCell>
                 <TableCell>{transaction.name}</TableCell>
                 <TableCell className="text-right font-medium">

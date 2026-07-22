@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { BookOpen } from "lucide-react";
 import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/utils";
 
 interface BudgetSummaryModalProps {
   month: string;
@@ -47,7 +48,7 @@ export function BudgetSummaryModal({
   const billsPaidTotal = bills.reduce((s, b) => s + (b.paidAmount ?? 0), 0);
 
   // Format income source dates
-  const incomeDates = incomeDetails.map((d) => format(new Date(d.date), "MMM d"));
+  const incomeDates = incomeDetails.map((d) => format(parseLocalDate(d.date), "MMM d"));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
